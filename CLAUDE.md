@@ -1,6 +1,6 @@
 # RodBot — contexto do projeto
 
-Bookmarklets (JS + HTML + CSS num único favorito) que automatizam o atendimento no **Blip Desk**.
+Bookmarklets (JS + HTML + CSS num único favorito) que automatizam o atendimento: **Blip Desk** (chat/mensagens ativas) e **HugMe** (tickets do Reclame Aqui).
 Autor: Rodrigo Facilidades. Idioma de código, UI e conversa: **português (pt-BR)**.
 
 ## Arquivos
@@ -21,7 +21,8 @@ Cada HTML é só a página de instalação (arrastar o botão para a barra de fa
 ## Sites
 
 - **Blip Desk** (onde os bookmarklets rodam). O antigo só roda em `https://mentorebank.desk.blip.ai`, na tela **Mensagens ativas** (`/activeMessage`); fora dela dá alerta e não abre. O final roda na tela de atendimento do Desk (lista de chats + chat aberto).
-- **HugMe** é a origem da planilha (colunas "Status Hugme", "Id HugMe"). Os bookmarklets **não rodam no HugMe**; só leem a planilha exportada de lá.
+- **HugMe** (`https://app.hugme.com.br/`): site onde a equipe **responde os tickets do Reclame Aqui (RA)**. A planilha XLSX usada pelo bookmarklet "Pedido concluído" vem de lá (colunas "Status Hugme", "Id HugMe"); o Blip é usado para avisar o cliente por mensagem ativa. **Os dois bookmarklets deste repositório rodam só no Blip**, não no HugMe.
+- Existem (ou existiram) bookmarklets que rodam **dentro do HugMe** (sessões "RodBot RA HugMe bookmarklet": abertura "Quem fala é {Especialista}", pular tickets sem "Resposta privada"). **Ainda não estão neste repositório**; se forem adicionados, documentar aqui.
 - Sem rede: nada é enviado para servidor próprio; XLSX é lido offline no navegador.
 
 ## rod bot — `rodbot-final.html` (painel `#blip-auto-panel`)
