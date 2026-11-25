@@ -14,14 +14,13 @@
     delayAcoes: 1200,
     delayTrocaTicket: 700
   };
-  let rodando = false, pausado = false, tickets = 0, modoAtual = null, modoChave = 'enviar', abaAtiva = 'pasta';
+  let rodando = false, pausado = false, modoAtual = null;
   let wakeLock = null;
   let logOculto = false;
 
   /*@@PURO-LOTE@@*/
 
   const THEME_KEY = 'rf_widget_theme_v1';
-  const TAB_KEY = 'rf_rodbot_tab_v1';
   const FOLDERS_KEY = 'rf_rodbot_recent_folders_v1';
   const DEFAULT_FOLDERS = ['nv2', 'default'];
 
@@ -44,18 +43,6 @@
   function saveTheme(t) {
     try { localStorage.setItem(THEME_KEY, t); } catch {}
     try { window.dispatchEvent(new CustomEvent('rf-bm-theme-change', { detail: t })); } catch {}
-  }
-
-  function getSavedTab() {
-    try {
-      const tab = localStorage.getItem(TAB_KEY);
-      return ['piloto', 'pasta', 'mensagem', 'fila', 'auto'].includes(tab) ? tab : 'piloto';
-    } catch {
-      return 'piloto';
-    }
-  }
-  function saveTab(tab) {
-    try { localStorage.setItem(TAB_KEY, tab); } catch {}
   }
 
   function getRecentFolders() {
@@ -81,7 +68,6 @@
     } catch {}
   }
 
-  abaAtiva = getSavedTab();
 
   const styleEl = document.createElement('style');
   styleEl.id = 'rf-rodbot-css';
@@ -208,25 +194,6 @@
     }
     #ba-close:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
     .ba-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-    .ba-tabs {
-      display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
-      background: var(--rb-elevated); border: 1px solid var(--rb-border);
-      border-radius: 12px; padding: 4px;
-    }
-    .ba-tab-btn {
-      border: 1px solid transparent; border-radius: 8px; padding: 7px 4px;
-      background: transparent; color: var(--rb-muted); font: 600 11px inherit;
-      cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; justify-content: center; gap: 4px;
-      white-space: nowrap;
-    }
-    .ba-tab-btn:hover { color: var(--rb-text); background: rgba(255,255,255,0.03); }
-    .ba-tab-btn.active {
-      background: var(--rb-accent-dim); color: var(--rb-accent);
-      border-color: var(--rb-accent-border); box-shadow: 0 2px 10px var(--rb-accent-glow);
-      font-weight: 700;
-    }
-    .ba-pane { display: none; flex-direction: column; gap: 11px; }
-    .ba-pane.active { display: flex; }
     .ba-card {
       background: var(--rb-card); border: 1px solid var(--rb-border); border-radius: 14px; padding: 12px;
     }
@@ -560,208 +527,22 @@
       </div>
     </div>
     <div class="ba-body">
-      <div id="ba-tabs" class="ba-tabs" role="tablist">
-        <button id="ba-tab-piloto" class="ba-tab-btn" type="button" data-ba-tab="piloto">⚡ Piloto</button>
-        <button id="ba-tab-pasta" class="ba-tab-btn" type="button" data-ba-tab="pasta">📁 Pastas</button>
-        <button id="ba-tab-mensagem" class="ba-tab-btn" type="button" data-ba-tab="mensagem">✉️ Envio</button>
-        <button id="ba-tab-fila" class="ba-tab-btn" type="button" data-ba-tab="fila">📥 Fila</button>
-        <button id="ba-tab-auto" class="ba-tab-btn" type="button" data-ba-tab="auto">💬 Auto</button>
-      </div>
-
-      <div id="ba-pane-piloto" class="ba-pane">
-        <div class="ba-pipeline">
-          <div class="ba-step" id="ba-step-1" data-status="idle">
-            <div class="ba-step-rail">
-              <div class="ba-step-icon">📥</div>
-              <div class="ba-step-line"></div>
-            </div>
-            <div class="ba-step-body">
-              <div class="ba-step-hdr">
-                <span class="ba-step-title">1. Puxar Fila (Atender)</span>
-                <span class="ba-step-status" id="ba-status-1">Aguardando</span>
-              </div>
-              <p class="ba-step-desc">Clica em Atender a cada 0.5s até zerar a fila</p>
-            </div>
-          </div>
-
-          <div class="ba-step" id="ba-step-2" data-status="idle">
-            <div class="ba-step-rail">
-              <div class="ba-step-icon">✉️</div>
-              <div class="ba-step-line"></div>
-            </div>
-            <div class="ba-step-body">
-              <div class="ba-step-hdr">
-                <span class="ba-step-title">2. Enviar Mensagens</span>
-                <span class="ba-step-status" id="ba-status-2">Pendente</span>
-              </div>
-              <p class="ba-step-desc">Dispara texto configurado sem finalizar ticket</p>
-            </div>
-          </div>
-
-          <div class="ba-step" id="ba-step-3" data-status="idle">
-            <div class="ba-step-rail">
-              <div class="ba-step-icon">⏸️</div>
-              <div class="ba-step-line"></div>
-            </div>
-            <div class="ba-step-body">
-              <div class="ba-step-hdr">
-                <span class="ba-step-title">3. Pausar Todos</span>
-                <span class="ba-step-status" id="ba-status-3">Pendente</span>
-              </div>
-              <p class="ba-step-desc">Coloca todos os clientes atendidos em espera</p>
-            </div>
-          </div>
-
-          <div class="ba-step" id="ba-step-4" data-status="idle">
-            <div class="ba-step-rail">
-              <div class="ba-step-icon">📁</div>
-              <div class="ba-step-line"></div>
-            </div>
-            <div class="ba-step-body">
-              <div class="ba-step-hdr">
-                <span class="ba-step-title">4. Mover para Pasta</span>
-                <span class="ba-step-status" id="ba-status-4">Pendente</span>
-              </div>
-              <p class="ba-step-desc">Envia os tickets para a pasta selecionada</p>
-            </div>
-          </div>
-
-          <div class="ba-loop-card" id="ba-loop-card">
-            <div class="ba-loop-icon">🔄</div>
-            <div class="ba-loop-text">
-              <div class="ba-loop-title">Loop Contínuo com Sentinela</div>
-              <div class="ba-loop-desc" id="ba-loop-desc">Repete o ciclo. Se fila zerar, vigia até surgir 1 ou + clientes.</div>
-            </div>
-          </div>
+      <div class="ba-card" id="ba-auto-card">
+        <div class="ba-row-head">
+          <span class="ba-label">💬 Chats novos</span>
+          <span id="ba-auto-state" class="ba-auto-state" data-tone="off">Desativada</span>
         </div>
-
-        <div class="ba-card">
-          <div class="ba-row-head" style="margin-bottom:6px;">
-            <span class="ba-label">⚙️ Configurações Rápidas</span>
-            <span class="ba-sub" id="ba-pilot-cycle-badge" style="color:var(--rb-accent);font-weight:700;">Ciclo: #0</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <div>
-              <div class="ba-row-head" style="margin-bottom:3px;">
-                <label for="ba-pilot-folder" class="ba-sub" style="font-weight:600;color:var(--rb-text);">📁 Pasta Destino:</label>
-              </div>
-              <input id="ba-pilot-folder" type="text" placeholder="Ex: nv2, default..." />
-              <div id="ba-pilot-folder-chips" class="ba-chips-row" style="margin-top:5px;"></div>
-            </div>
-            <div>
-              <div class="ba-row-head" style="margin-bottom:3px;">
-                <label for="ba-pilot-msg" class="ba-sub" style="font-weight:600;color:var(--rb-text);">✉️ Mensagem do Envio:</label>
-                <button id="ba-pilot-fill-default" class="ba-pill-btn" type="button" title="Preencher mensagem padrão">📋 Usar padrão</button>
-              </div>
-              <textarea id="ba-pilot-msg" rows="2" placeholder="Digite a mensagem para os clientes..."></textarea>
-            </div>
-          </div>
+        <div class="ba-auto-stats">
+          <div><span class="ba-sub">Novos chats (BM)</span><b id="ba-auto-count">0</b></div>
+          <div><span class="ba-sub">Contador Blip</span><b id="ba-auto-native">--</b></div>
+          <div><span class="ba-sub">Na fila do BM</span><b id="ba-auto-queue">0</b></div>
         </div>
-
-        <button id="ba-pilot-start" class="ba-cta" type="button">
-          ⚡ Iniciar Piloto Automático
-        </button>
-      </div>
-
-      <div id="ba-pane-pasta" class="ba-pane">
-        <div class="ba-card">
-          <div class="ba-row-head" style="margin-bottom:4px;">
-            <label for="ba-folder" class="ba-label">Nome exato da pasta</label>
-          </div>
-          <p class="ba-sub" style="margin:0 0 9px;">Percorre a fila e move cada cliente para a pasta correspondente no Blip.</p>
-          <input id="ba-folder" type="text" placeholder="Ex: nv2, default..." />
-          <div id="ba-folder-chips" class="ba-chips-row"></div>
-        </div>
-        <button id="ba-move-folder" class="ba-cta" type="button">📁 Mover todos para pasta</button>
-      </div>
-
-      <div id="ba-pane-mensagem" class="ba-pane">
-        <div class="ba-card">
-          <div class="ba-row-head">
-            <label for="ba-msg" class="ba-label">Mensagem para enviar</label>
-            <button id="ba-fill-default" class="ba-pill-btn" type="button" title="Preencher com a mensagem padrão">📋 Usar padrão</button>
-          </div>
-          <textarea id="ba-msg" rows="3" placeholder="Digite ou cole o texto para os clientes da fila..."></textarea>
-        </div>
-        <div class="ba-card">
-          <div class="ba-row-head">
-            <span class="ba-label">Modo de operação</span>
-          </div>
-          <div id="ba-mode-switch">
-            <button id="ba-mode-enviar" type="button" aria-pressed="true">🛡️ Só Enviar</button>
-            <button id="ba-mode-finalizar" type="button" aria-pressed="false">⚡ Enviar + Finalizar</button>
-          </div>
-          <div id="ba-mode-hint"></div>
-          <div id="ba-tag-wrap" style="display:none;margin-top:9px;padding-top:9px;border-top:1px solid var(--rb-border);">
-            <label for="ba-tag" class="ba-label" style="display:block;margin-bottom:5px;">Tag para finalizar</label>
-            <input id="ba-tag" type="text" placeholder="Ex: revi, cobran..." />
-            <label for="ba-simular" class="ba-sub" style="display:flex;align-items:center;gap:6px;margin-top:9px;cursor:pointer;">
-              <input id="ba-simular" type="checkbox" checked style="width:auto;margin:0;" />
-              🧪 Simular (abre cada chat e preenche o texto, mas NÃO envia, não põe tag e não finaliza)
-            </label>
-          </div>
-        </div>
-        <button id="ba-play" class="ba-cta" type="button">▶ Enviar para todos</button>
-      </div>
-
-      <div id="ba-pane-fila" class="ba-pane">
-        <div class="ba-card">
-          <div class="ba-row-head" style="margin-bottom:4px;">
-            <span class="ba-label">📥 Atendimento Automático</span>
-            <span class="ba-sub">Aguardando: <b id="ba-queue-count" style="color:var(--rb-accent);font-size:12px;">--</b></span>
-          </div>
-          <p class="ba-sub" style="margin:0 0 10px;">Clica em "Atender" a cada meio segundo (0.5s) até que a contagem da fila zere.</p>
-          <button id="ba-claim-auto" class="ba-cta" type="button">Atender Automático</button>
-        </div>
-        <div class="ba-card">
-          <div class="ba-label" style="margin-bottom:4px;">Controle de espera sem mensagem</div>
-          <p class="ba-sub" style="margin:0 0 10px;">Altera o status de espera de todos os clientes visíveis na fila atual.</p>
-          <div class="ba-actions-row">
-            <button id="ba-pause-all" type="button">⏸️ Pausar todos</button>
-            <button id="ba-unpause-all" type="button">▶️ Despausar todos</button>
-          </div>
-        </div>
-        <div class="ba-card">
-          <div class="ba-row-head" style="margin-bottom:4px;">
-            <label for="ba-transfer-name" class="ba-label">🔁 Transferir para atendente</label>
-          </div>
-          <p class="ba-sub" style="margin:0 0 9px;">Transfere um ticket por vez, sempre o primeiro da lista atual, para o atendente pesquisado no Blip pelo nome exato. Não envia mensagens nem finaliza.</p>
-          <input id="ba-transfer-name" type="text" placeholder="Nome do atendente (exato, como aparece no Blip)" autocomplete="off" />
-          <div id="ba-transfer-status" class="ba-sub" style="margin-top:6px;"></div>
-          <button id="ba-transfer-start" class="ba-cta" type="button" style="margin-top:9px;">🔁 Transferir todos para o atendente</button>
-        </div>
-      </div>
-
-      <div id="ba-pane-auto" class="ba-pane">
-        <div class="ba-card">
-          <div class="ba-row-head">
-            <span class="ba-label">💬 Resposta a novos chats</span>
-            <span id="ba-auto-state" class="ba-auto-state" data-tone="off">Desativada</span>
-          </div>
-          <p class="ba-sub" style="margin:0 0 9px;">Envia a mensagem abaixo a cada chat que chegar depois da ativação e pausa o cliente só após confirmar o envio. Chats já presentes na ativação não recebem nada.</p>
-          <button id="ba-auto-toggle" class="ba-cta" type="button">▶ Ativar resposta automática</button>
-        </div>
-        <div class="ba-card">
-          <div class="ba-row-head">
-            <label for="ba-auto-msg" class="ba-label">Mensagem automática</label>
-            <button id="ba-auto-fill-default" class="ba-pill-btn" type="button" title="Preencher com a mensagem padrão">📋 Usar padrão</button>
-          </div>
-          <textarea id="ba-auto-msg" rows="3" placeholder="Texto enviado a cada novo chat..."></textarea>
-          <p class="ba-sub" style="margin:6px 0 0;">Alterações valem a partir do próximo atendimento.</p>
-        </div>
-        <div class="ba-card">
-          <div class="ba-auto-stats">
-            <div><span class="ba-sub">Novos chats (BM)</span><b id="ba-auto-count">0</b></div>
-            <div><span class="ba-sub">Contador Blip</span><b id="ba-auto-native">--</b></div>
-            <div><span class="ba-sub">Na fila do BM</span><b id="ba-auto-queue">0</b></div>
-          </div>
-          <div id="ba-auto-detail" class="ba-sub" style="margin-top:8px;">Desativada.</div>
-          <div id="ba-auto-list" class="ba-auto-list"></div>
-          <div class="ba-auto-actions">
-            <button id="ba-auto-resume" class="ba-pill-btn" type="button" style="display:none;">▶ Retomar</button>
-            <button id="ba-auto-retry-pause" class="ba-pill-btn" type="button" style="display:none;">⏸️ Repetir pausas pendentes</button>
-            <button id="ba-auto-reset" class="ba-link-btn" type="button">Zerar contador</button>
-          </div>
+        <div id="ba-auto-detail" class="ba-sub" style="margin-top:8px;">Desativada.</div>
+        <div id="ba-auto-list" class="ba-auto-list"></div>
+        <div class="ba-auto-actions">
+          <button id="ba-auto-resume" class="ba-pill-btn" type="button" style="display:none;">▶ Retomar</button>
+          <button id="ba-auto-retry-pause" class="ba-pill-btn" type="button" style="display:none;">⏸️ Repetir pausas pendentes</button>
+          <button id="ba-auto-reset" class="ba-link-btn" type="button">Zerar contador</button>
         </div>
       </div>
 
@@ -854,128 +635,15 @@
   document.addEventListener('mouseup', onDocMouseUp);
 
   const stEl = document.getElementById('ba-st'), logEl = document.getElementById('ba-log');
-  const cntEl = document.getElementById('ba-cnt'), btnPlay = document.getElementById('ba-play');
+  const cntEl = document.getElementById('ba-cnt');
   const btnPause = document.getElementById('ba-pause'), btnStop = document.getElementById('ba-stop');
   const btnClose = document.getElementById('ba-close');
-  const btnFillDefault = document.getElementById('ba-fill-default');
-  const btnModeEnviar = document.getElementById('ba-mode-enviar');
-  const btnModeFinalizar = document.getElementById('ba-mode-finalizar');
-  const modeHintEl = document.getElementById('ba-mode-hint');
-  const tagWrapEl = document.getElementById('ba-tag-wrap');
-  const btnPauseAll = document.getElementById('ba-pause-all'), btnUnpauseAll = document.getElementById('ba-unpause-all');
-  const msgEl = document.getElementById('ba-msg'), tagEl = document.getElementById('ba-tag');
-  const folderEl = document.getElementById('ba-folder'), btnMoveFolder = document.getElementById('ba-move-folder');
-  const folderChipsEl = document.getElementById('ba-folder-chips');
   const runBarEl = document.getElementById('ba-run-bar'), runLabelEl = document.getElementById('ba-run-label');
   const btnClearLog = document.getElementById('ba-clear-log'), btnToggleLog = document.getElementById('ba-toggle-log');
   const btnBaixarLog = document.getElementById('ba-baixar-log'), btnBaixarRelatorio = document.getElementById('ba-baixar-relatorio');
-  const simularEl = document.getElementById('ba-simular');
-  const btnClaimAuto = document.getElementById('ba-claim-auto'), queueCountEl = document.getElementById('ba-queue-count');
+  const queueCountEl = document.getElementById('ba-queue-count'); // badge da antiga aba Fila: hoje null
 
-  const pilotFolderEl = document.getElementById('ba-pilot-folder');
-  const pilotMsgEl = document.getElementById('ba-pilot-msg');
-  const pilotFolderChipsEl = document.getElementById('ba-pilot-folder-chips');
-  const pilotFillDefaultBtn = document.getElementById('ba-pilot-fill-default');
-  const btnPilotStart = document.getElementById('ba-pilot-start');
 
-  const tabBtns = [...document.querySelectorAll('.ba-tab-btn')];
-  const panes = {
-    piloto: document.getElementById('ba-pane-piloto'),
-    pasta: document.getElementById('ba-pane-pasta'),
-    mensagem: document.getElementById('ba-pane-mensagem'),
-    fila: document.getElementById('ba-pane-fila'),
-    auto: document.getElementById('ba-pane-auto')
-  };
-
-  function aplicarAba(novaAba) {
-    if (!panes[novaAba]) return;
-    abaAtiva = novaAba;
-    saveTab(novaAba);
-    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.baTab === novaAba));
-    Object.keys(panes).forEach(k => panes[k].classList.toggle('active', k === novaAba));
-  }
-  tabBtns.forEach(b => {
-    b.onclick = () => {
-      if (rodando) return;
-      aplicarAba(b.dataset.baTab);
-    };
-  });
-  aplicarAba(abaAtiva);
-
-  function renderFolderChips() {
-    const folders = getRecentFolders();
-    const html = `<span class="ba-chip-caption">Rápidas:</span>` +
-      folders.map(f => `<button type="button" class="ba-chip" data-folder-chip="${f.replace(/"/g, '&quot;')}">📁 ${f.replace(/</g, '&lt;')}</button>`).join('');
-    [folderChipsEl, pilotFolderChipsEl].forEach(container => {
-      if (!container) return;
-      container.innerHTML = html;
-      container.querySelectorAll('.ba-chip').forEach(ch => {
-        ch.onclick = () => {
-          if (rodando) return;
-          const val = ch.dataset.folderChip;
-          if (folderEl) folderEl.value = val;
-          if (pilotFolderEl) pilotFolderEl.value = val;
-          CONFIG.pastaDestino = val;
-        };
-      });
-    });
-  }
-  renderFolderChips();
-
-  if (pilotFolderEl) {
-    bindPanelInput(pilotFolderEl, CONFIG.pastaDestino, val => {
-      CONFIG.pastaDestino = val;
-      if (folderEl && folderEl.value !== val) folderEl.value = val;
-    });
-  }
-  if (folderEl) {
-    folderEl.addEventListener('input', () => {
-      if (pilotFolderEl && pilotFolderEl.value !== folderEl.value) {
-        pilotFolderEl.value = folderEl.value;
-      }
-    });
-  }
-
-  if (pilotMsgEl) {
-    bindPanelInput(pilotMsgEl, CONFIG.mensagem, val => {
-      CONFIG.mensagem = val;
-      if (msgEl && msgEl.value !== val) msgEl.value = val;
-    });
-  }
-  if (msgEl) {
-    msgEl.addEventListener('input', () => {
-      if (pilotMsgEl && pilotMsgEl.value !== msgEl.value) {
-        pilotMsgEl.value = msgEl.value;
-      }
-    });
-  }
-
-  if (pilotFillDefaultBtn) {
-    pilotFillDefaultBtn.onclick = () => {
-      if (rodando) return;
-      if (pilotMsgEl) {
-        pilotMsgEl.value = MENSAGEM_PADRAO;
-        pilotMsgEl.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (msgEl) {
-        msgEl.value = MENSAGEM_PADRAO;
-        msgEl.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      CONFIG.mensagem = MENSAGEM_PADRAO;
-      log("📋 Mensagem padrão carregada no Piloto.");
-    };
-  }
-
-  function bindPanelInput(el, initialVal, onUpdate) {
-    el.value = initialVal;
-    el.addEventListener('input', () => onUpdate(el.value));
-    ['keydown', 'keyup', 'keypress'].forEach(evt => {
-      el.addEventListener(evt, e => e.stopPropagation());
-    });
-  }
-  bindPanelInput(msgEl, CONFIG.mensagem, val => { CONFIG.mensagem = val; });
-  bindPanelInput(tagEl, CONFIG.tagBusca, val => { CONFIG.tagBusca = val; });
-  bindPanelInput(folderEl, CONFIG.pastaDestino, val => { CONFIG.pastaDestino = val; });
 
   btnClearLog.onclick = () => {
     logEl.innerHTML = '';
@@ -986,42 +654,6 @@
     logEl.style.display = logOculto ? 'none' : 'block';
     btnToggleLog.textContent = logOculto ? 'Mostrar log' : 'Ocultar log';
   };
-
-  function aplicarModoVisual() {
-    const ehFinalizar = modoChave === 'finalizar';
-    btnModeEnviar.setAttribute('aria-pressed', ehFinalizar ? 'false' : 'true');
-    btnModeFinalizar.setAttribute('aria-pressed', ehFinalizar ? 'true' : 'false');
-    btnModeEnviar.style.background = ehFinalizar ? 'transparent' : 'var(--rb-accent)';
-    btnModeEnviar.style.color = ehFinalizar ? 'var(--rb-muted)' : 'var(--rb-on-accent)';
-    btnModeEnviar.style.boxShadow = ehFinalizar ? 'none' : '0 2px 12px var(--rb-accent-glow)';
-    btnModeFinalizar.style.background = ehFinalizar ? '#0ea5e9' : 'transparent';
-    btnModeFinalizar.style.color = ehFinalizar ? '#ffffff' : 'var(--rb-muted)';
-    btnModeFinalizar.style.boxShadow = ehFinalizar ? '0 2px 12px rgba(14,165,233,0.4)' : 'none';
-    if (ehFinalizar) {
-      modeHintEl.innerHTML = '⚡ <b>Modo completo:</b> envia, aplica a tag e finaliza cada ticket.';
-      modeHintEl.style.color = '#7dd3fc';
-      tagWrapEl.style.display = 'block';
-    } else {
-      modeHintEl.innerHTML = '🛡️ <b>Modo seguro:</b> escreve para toda a fila sem encerrar tickets.';
-      modeHintEl.style.color = 'var(--rb-muted)';
-      tagWrapEl.style.display = 'none';
-    }
-    if (!rodando) {
-      btnPlay.textContent = ehFinalizar ? '▶ Atender e Finalizar' : '▶ Enviar para todos';
-      btnPlay.style.background = ehFinalizar ? '#0ea5e9' : 'var(--rb-accent)';
-      btnPlay.style.color = ehFinalizar ? '#ffffff' : 'var(--rb-on-accent)';
-      btnPlay.style.boxShadow = ehFinalizar ? '0 4px 16px rgba(14,165,233,0.35)' : '0 4px 16px var(--rb-accent-glow)';
-    }
-  }
-  function definirModoChave(novoModo) {
-    if (rodando || modoChave === novoModo) return;
-    modoChave = novoModo;
-    aplicarModoVisual();
-    log(novoModo === 'finalizar'
-      ? '⚡ Modo selecionado: Enviar + Finalizar'
-      : '🛡️ Modo selecionado: Só Enviar (sem finalizar)');
-  }
-  aplicarModoVisual();
 
   function escapeRegExp(str) {
     return (str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1132,7 +764,7 @@
     await preencherCampoMensagem(input, texto);
     dispararEnvioEnter(input);
     log("✅ Mensagem enviada!");
-    await sleep(CONFIG.delayAcoes);
+    await pausaAcao(CONFIG.delayAcoes);
   }
   // Preenche o #text-input como a aplicação espera (setter nativo + eventos input/change).
   async function preencherCampoMensagem(input, texto) {
@@ -1153,8 +785,8 @@
   // Tag do passo Enviar + Finalizar. v10.1: só clica na opção igual ao texto (ou que contém o texto).
   // Se não achar, lança erro e o cliente fica como "enviado, NÃO finalizado" — nunca escolhe a 1ª da lista.
   async function passo2_tag(tagParam) {
-    const tagAtual = String(tagParam || '').trim();
-    if (!tagAtual) throw new Error("A caixa da tag está vazia.");
+    const tagAtual = String(tagParam || '').trim(); // a tag vem do passo Enviar + Finalizar
+    if (!tagAtual) throw new Error("A tag do passo está vazia.");
     CONFIG.tagBusca = tagAtual;
     log("🏷️ Abrindo 'Adicionar tags'...");
     const addTagDiv = await waitFor(() => {
@@ -1163,7 +795,7 @@
       return document.querySelector('.tags-container div.pointer');
     }).catch(() => { throw new Error("'Adicionar tags' não apareceu"); });
     clickUnico(addTagDiv);
-    await sleep(CONFIG.delayAcoes);
+    await pausaAcao(CONFIG.delayAcoes);
     const selectChips = await waitFor(() => document.querySelector('bds-select-chips'))
       .catch(() => { throw new Error('a caixa de tags não abriu'); });
     if (!selectChips.shadowRoot) throw new Error("ShadowRoot indisponível");
@@ -1192,7 +824,7 @@
     }, 5000).catch(() => { throw new Error(`a tag "${tagAtual}" não apareceu na lista do Blip`); });
     clickUnico(tagOption);
     log(`✅ Tag selecionada: ${textoOpcao(tagOption) || tagAtual}`);
-    await sleep(CONFIG.delayAcoes);
+    await pausaAcao(CONFIG.delayAcoes);
   }
   async function passo3_finalizar() {
     log("🔵 Clicando em 'Finalizar'...");
@@ -1220,8 +852,7 @@
     log("📋 Confirmando no modal...");
     let usouReserva = false;
     const btnConfirmar = await waitFor(() => {
-      const btns = document.querySelectorAll('button, bds-button');
-      for (const b of btns) {
+      for (const b of document.querySelectorAll('button, bds-button')) {
         if (p.contains(b)) continue;
         const txt = (b.textContent || b.getAttribute('label') || '').trim().toLowerCase();
         if (txt.includes('finalizar ticket')) {
@@ -1233,8 +864,7 @@
         if (p.contains(modal) || !modalAberto(modal)) continue;
         for (const b of modal.querySelectorAll('bds-button, button')) {
           if (b.closest('#close-ticket-button, #close-ticket-button-icon')) continue;
-          const txt = autoTextoComposto(b) || b.textContent || b.getAttribute('label') || '';
-          if (loteBotaoConfirmaFinalizar(txt)) {
+          if (loteBotaoConfirmaFinalizar(autoTextoComposto(b) || b.textContent || b.getAttribute('label') || '')) {
             usouReserva = true;
             return b.shadowRoot?.querySelector('button') || b;
           }
@@ -1248,57 +878,66 @@
     log("✅ Confirmação clicada.");
     await sleep(1000);
     await fecharAvisosPendentes();
-    await sleep(CONFIG.delayTrocaTicket);
+    await pausaAcao(CONFIG.delayTrocaTicket);
+  }
+
+  // Fecha o que pode ter ficado aberto (lista de tags, modal de finalizar) para não travar o próximo cliente.
+  // Deduzido, não confirmado no Blip real: Esc fecha a lista de tags; o modal tem um botão "Cancelar".
+  async function loteFecharSobras() {
+    const esc = { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, composed: true };
+    try {
+      (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', esc));
+      document.dispatchEvent(new KeyboardEvent('keydown', esc));
+    } catch {}
+    await sleep(300);
+    for (const m of document.querySelectorAll('bds-modal, [role="dialog"]')) {
+      if (p.contains(m) || !modalAberto(m)) continue;
+      const cancelar = [...m.querySelectorAll('bds-button, button')]
+        .find(b => /cancelar/i.test(autoTextoComposto(b) || b.textContent || ''));
+      if (cancelar) {
+        (cancelar.shadowRoot?.querySelector('button') || cancelar).click();
+        log('🧹 Fechei uma janela que ficou aberta (Cancelar).');
+        await sleep(400);
+      }
+    }
+    await fecharAvisosPendentes();
+  }
+
+  // Memória de envio (24 h, por ticket + mensagem): gravada ANTES do Enter, para nunca reenviar.
+  function loteLerMemoria() {
+    try {
+      const o = JSON.parse(localStorage.getItem(LOTE_MEMORIA_CHAVE) || '{}');
+      return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+    } catch {
+      return {};
+    }
+  }
+  function loteGravarMemoria(chave, estado) {
+    const agora = Date.now();
+    const o = loteMemoriaLimpar(loteLerMemoria(), agora);
+    o[chave] = { estado, ts: agora };
+    try { localStorage.setItem(LOTE_MEMORIA_CHAVE, JSON.stringify(o)); } catch {}
+  }
+
+  // Relatório da execução (📄 Relatório): uma linha por ticket e passo. Fica salvo (sobrevive a reinício do PC).
+  let loteRegistros = [];
+  let loteInicio = '';
+  function loteRegistrar(id, passo, resultado, motivo) {
+    loteRegistros.push({ id, passo, resultado, motivo: motivo || '', hora: new Date().toLocaleTimeString('pt-BR') });
+    try {
+      localStorage.setItem(LOTE_RELATORIO_CHAVE, JSON.stringify({ inicio: loteInicio, registros: loteRegistros }));
+    } catch {}
   }
 
   function atualizarBotoesEstado(emExecucao, tituloExec = '') {
-    const controlesBloqueados = [
-      btnModeEnviar, btnModeFinalizar, btnFillDefault, pilotFillDefaultBtn,
-      btnPauseAll, btnUnpauseAll, btnPlay, btnMoveFolder, btnClaimAuto, ...tabBtns,
-      document.getElementById('ba-transfer-name'), document.getElementById('ba-transfer-start')
-    ].filter(Boolean);
-
     if (emExecucao) {
       setSt('Rodando', '#16a34a');
       runBarEl.style.display = 'flex';
       runLabelEl.textContent = tituloExec || 'Automação em execução...';
       btnPause.textContent = '⏸ Pausar';
-
-      if (modoAtual === 'piloto') {
-        if (btnPilotStart) {
-          btnPilotStart.disabled = false;
-          btnPilotStart.style.opacity = '1';
-          btnPilotStart.style.cursor = 'pointer';
-          btnPilotStart.textContent = '⏹ Interromper Piloto Contínuo';
-          btnPilotStart.style.background = '#ef4444';
-          btnPilotStart.style.color = '#ffffff';
-        }
-      } else {
-        if (btnPilotStart) {
-          btnPilotStart.disabled = true;
-          btnPilotStart.style.opacity = '0.52';
-          btnPilotStart.style.cursor = 'not-allowed';
-        }
-      }
     } else {
       setSt('Parado', 'rgba(100,116,139,0.55)');
       runBarEl.style.display = 'none';
-      aplicarModoVisual();
-
-      if (btnPilotStart) {
-        btnPilotStart.disabled = false;
-        btnPilotStart.style.opacity = '1';
-        btnPilotStart.style.cursor = 'pointer';
-        btnPilotStart.textContent = '⚡ Iniciar Piloto Automático';
-        btnPilotStart.style.background = '';
-        btnPilotStart.style.color = '';
-      }
-    }
-
-    for (const b of controlesBloqueados) {
-      b.disabled = emExecucao;
-      b.style.opacity = emExecucao ? '0.52' : '1';
-      b.style.cursor = emExecucao ? 'not-allowed' : 'pointer';
     }
   }
   async function aguardarPausaSeNecessario() {
@@ -1315,9 +954,15 @@
     const inner = el.shadowRoot?.querySelector('button, div');
     return !!(inner && isElementoVisivel(inner));
   }
+  // No Blip real o bds-menu fechado só fica transparente: as opções continuam com tamanho na tela. Por isso o estado
+  // vem do próprio bds-menu (atributo/propriedade `open`, medido no Blip em 23/11/2026) e não da visibilidade.
+  function bdsMenuAberto(menu) {
+    return !!menu && (menu.open === true || menu.hasAttribute('open'));
+  }
   function encontrarOpcaoMenu(wrap, testId) {
     const local = wrap?.querySelector(`bds-menu-action[data-testid="${testId}"]`);
-    if (isAcaoMenuVisivel(local)) return local;
+    const menuLocal = local?.closest('bds-menu');
+    if (isAcaoMenuVisivel(local) && (!menuLocal || bdsMenuAberto(menuLocal))) return local;
     const abertos = document.querySelectorAll(`bds-menu[open] bds-menu-action[data-testid="${testId}"], div.ticket-menu.visible bds-menu-action[data-testid="${testId}"]`);
     for (const el of abertos) {
       if (isAcaoMenuVisivel(el)) return el;
@@ -1327,7 +972,7 @@
   function menuEstaAberto(wrap) {
     if (!wrap) return false;
     const menu = wrap.querySelector('bds-menu');
-    if (menu && (menu.open === true || menu.hasAttribute('open'))) return true;
+    if (menu) return bdsMenuAberto(menu);
     return [...wrap.querySelectorAll('bds-menu-action')].some(isAcaoMenuVisivel);
   }
   async function fecharMenuTicket(wrap, btn) {
@@ -1336,7 +981,8 @@
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
     await sleep(150);
     if (menuEstaAberto(wrap)) {
-      clickUnico(btn);
+      // No Blip, Escape não fecha; a outzone do bds-menu fecha. O ⋮ alterna, então só é clicado sem outzone.
+      clickUnico(menu?.shadowRoot?.querySelector('.outzone') || btn);
       await sleep(150);
     }
   }
@@ -1505,101 +1151,6 @@
     return nomes.slice(0, 12);
   }
 
-  async function percorrerItensFila({ modo, seletor, tituloInicio, tituloBarra, verboPassado, processarItem, aoErro }) {
-    if (rodando) return;
-    rodando = true;
-    pausado = false;
-    modoAtual = modo;
-    ativarWakeLock();
-    atualizarBotoesEstado(true, tituloBarra || tituloInicio);
-    const processados = new Set();
-    let alterados = 0;
-    let pulados = 0;
-    let scrollContainer = null;
-    let tentativasFim = 0;
-    try {
-      const iniciais = [...document.querySelectorAll(seletor)];
-      if (iniciais.length === 0) {
-        log('⚠️ Nenhum cliente encontrado na fila.');
-        return;
-      }
-      scrollContainer = encontrarContainerScroll(iniciais[0]);
-      if (scrollContainer && scrollContainer.scrollTop > 0) {
-        scrollContainer.scrollTop = 0;
-        await sleep(350);
-      }
-      cntEl.textContent = '0';
-      log(`🚀 ${tituloInicio} (${iniciais.length} visíveis)...`);
-      while (rodando) {
-        if (!(await aguardarPausaSeNecessario())) break;
-        const lista = [...document.querySelectorAll(seletor)];
-        let alvo = null;
-        let chave = '';
-        for (let i = 0; i < lista.length; i++) {
-          const item = lista[i];
-          const k = obterChaveElemento(item, i);
-          if (!processados.has(k)) {
-            alvo = item;
-            chave = k;
-            break;
-          }
-        }
-        if (!alvo) {
-          tentativasFim++;
-          if (tentativasFim <= 4) {
-            scrollContainer = scrollContainer || encontrarContainerScroll(lista[lista.length - 1]);
-            log(`⏳ Rolando fila para carregar mais atendimentos (${tentativasFim}/4)...`);
-            if (scrollContainer) {
-              scrollContainer.scrollTop += Math.max(300, Math.floor(scrollContainer.clientHeight * 0.8));
-              scrollContainer.dispatchEvent(new Event('scroll', { bubbles: true }));
-            }
-            window.dispatchEvent(new Event('scroll'));
-            await sleep(1400);
-            continue;
-          }
-          break;
-        }
-        tentativasFim = 0;
-        processados.add(chave);
-        try {
-          const res = await processarItem(alvo, chave, alterados, scrollContainer);
-          if (res === 'alterado') {
-            alterados++;
-            cntEl.textContent = alterados;
-          } else if (res === 'pulado') {
-            pulados++;
-          }
-        } catch (err) {
-          log(`❌ Erro (${chave}): ${err.message}`);
-          if (aoErro) await aoErro(alvo, err);
-          await fecharAvisosPendentes();
-        }
-        await sleep(350);
-      }
-      log(`🏁 Finalizado: ${alterados} ${verboPassado}(s)${pulados ? `, ${pulados} pulado(s)` : ''}.`);
-    } finally {
-      rodando = false;
-      pausado = false;
-      modoAtual = null;
-      await liberarWakeLock();
-      atualizarBotoesEstado(false);
-      log("⏹ Automação parada.");
-    }
-  }
-
-  async function rolarFila() {
-    const sc = obterScrollContainerGeral();
-    if (sc) {
-      sc.scrollTop += Math.max(300, Math.floor(sc.clientHeight * 0.8));
-      sc.dispatchEvent(new Event('scroll', { bubbles: true }));
-    }
-    const articles = document.querySelectorAll('article.chat-list-item');
-    if (articles.length > 0) {
-      articles[articles.length - 1].scrollIntoView?.({ block: 'end', behavior: 'instant' });
-    }
-    window.dispatchEvent(new Event('scroll'));
-  }
-
   async function processarMoverTicket(alvo, pasta, alvoNorm, labelId, totalAtual) {
     const wrap = alvo.closest('.ticket-menu') || alvo.parentElement;
     const card = alvo.closest('article.chat-list-item, [class*="chat-list-item"], [class*="ticket"]') || wrap;
@@ -1685,7 +1236,6 @@
     }
 
     saveRecentFolder(pasta);
-    renderFolderChips();
     log(`✅ Ticket ${labelId} movido para "${pasta}"! (${totalAtual + 1})`);
 
     // 6. Aguarda o Blip processar a mudança de pasta
@@ -1697,455 +1247,6 @@
     return 'alterado';
   }
 
-  async function executarMoverParaPastaTodos(nomePasta) {
-    const pasta = (nomePasta || folderEl.value).trim();
-    if (!pasta) {
-      log('⚠️ Digite o nome exato da pasta antes de iniciar.');
-      folderEl.focus();
-      return;
-    }
-    CONFIG.pastaDestino = pasta;
-    const alvoNorm = normalizarTexto(pasta);
-
-    if (rodando) return;
-    rodando = true;
-    pausado = false;
-    modoAtual = 'pasta';
-    ativarWakeLock();
-    atualizarBotoesEstado(true, `Movendo → ${pasta}`);
-
-    cntEl.textContent = '0';
-    let alterados = 0;
-    let pulados = 0;
-    const falhasSeguidas = new Map();
-    let tentativasSemTickets = 0;
-
-    log(`🚀 Iniciando movimentação para a pasta "${pasta}"...`);
-
-    try {
-      while (rodando) {
-        if (!(await aguardarPausaSeNecessario())) break;
-
-        const lista = [...document.querySelectorAll('button.ticket-info-options')];
-        if (lista.length === 0) {
-          tentativasSemTickets++;
-          if (tentativasSemTickets <= 4) {
-            log(`⏳ Carregando fila (${tentativasSemTickets}/4)...`);
-            await rolarFila();
-            await sleep(1200);
-            continue;
-          }
-          log('🏁 Fila vazia ou nenhum cliente restante.');
-          break;
-        }
-
-        // Pega o primeiro da fila que não esteja em loop de falha
-        let alvo = null;
-        let chave = '';
-        for (let i = 0; i < lista.length; i++) {
-          const item = lista[i];
-          const k = obterChaveElemento(item, i);
-          const falhas = falhasSeguidas.get(k) || 0;
-          if (falhas < 2) {
-            alvo = item;
-            chave = k;
-            break;
-          }
-        }
-
-        if (!alvo) {
-          tentativasSemTickets++;
-          if (tentativasSemTickets <= 3) {
-            log(`⏳ Tentando carregar novos tickets além dos pulados (${tentativasSemTickets}/3)...`);
-            await rolarFila();
-            await sleep(1400);
-            continue;
-          }
-          log('🏁 Todos os tickets restantes foram processados ou pulados.');
-          break;
-        }
-
-        tentativasSemTickets = 0;
-        const labelId = alvo.id ? `#${alvo.id.replace('menu-', '')}` : chave;
-
-        try {
-          const res = await processarMoverTicket(alvo, pasta, alvoNorm, labelId, alterados);
-          if (res === 'alterado') {
-            alterados++;
-            cntEl.textContent = alterados;
-            falhasSeguidas.delete(chave);
-          } else {
-            pulados++;
-            const f = falhasSeguidas.get(chave) || 0;
-            falhasSeguidas.set(chave, f + 1);
-          }
-        } catch (err) {
-          log(`❌ Erro no ticket ${labelId}: ${err.message}`);
-          pulados++;
-          const f = falhasSeguidas.get(chave) || 0;
-          falhasSeguidas.set(chave, f + 1);
-          await fecharAvisosPendentes();
-        }
-
-        // Aguarda a fila atualizar (o ticket sair e o próximo tomar o lugar no topo!)
-        await sleep(CONFIG.delayAcoes);
-      }
-
-      log(`🏁 Finalizado: ${alterados} movido(s) para "${pasta}"${pulados ? `, ${pulados} pulado(s)` : ''}.`);
-    } finally {
-      rodando = false;
-      pausado = false;
-      modoAtual = null;
-      await liberarWakeLock();
-      atualizarBotoesEstado(false);
-      log("⏹ Automação parada.");
-    }
-  }
-
-  async function executarModoEsperaTodos(acao) {
-    const ehPausar = acao === 'pausar';
-    const targetTestId = ehPausar ? 'option-setStandbyMode' : 'option-unsetStandbyMode';
-    const oppositeTestId = ehPausar ? 'option-unsetStandbyMode' : 'option-setStandbyMode';
-    const verbo = ehPausar ? 'Pausando' : 'Despausando';
-    const verboPassado = ehPausar ? 'pausado' : 'despausado';
-    await percorrerItensFila({
-      modo: acao,
-      seletor: 'button.ticket-info-options',
-      tituloInicio: `${verbo} todos os clientes`,
-      tituloBarra: `${verbo} fila`,
-      verboPassado,
-      processarItem: async (alvo, chave, totalAtual, scrollContainer) => {
-        const wrap = alvo.closest('.ticket-menu') || alvo.parentElement;
-        const card = alvo.closest('article.chat-list-item, [class*="chat-list-item"], [class*="ticket"]') || wrap;
-        const labelId = alvo.id ? `#${alvo.id.replace('menu-', '')}` : chave;
-        rolarCardNoContainer(card, scrollContainer);
-        card?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-        card?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-        wrap?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-        await sleep(120);
-        clickUnico(alvo);
-        const acaoEncontrada = await waitFor(() => {
-          const t = encontrarOpcaoMenu(wrap, targetTestId);
-          if (t) return { tipo: 'alvo', el: t };
-          const o = encontrarOpcaoMenu(wrap, oppositeTestId);
-          if (o) return { tipo: 'oposto', el: o };
-          return null;
-        }, 3500, 100);
-        if (!(await aguardarPausaSeNecessario())) {
-          await fecharMenuTicket(wrap, alvo);
-          return 'parado';
-        }
-        if (acaoEncontrada.tipo === 'alvo') {
-          const innerBtn = acaoEncontrada.el.shadowRoot?.querySelector('button.menuaction__button, button') || acaoEncontrada.el;
-          await sleep(150);
-          clickUnico(innerBtn);
-          log(`✅ Ticket ${labelId} ${verboPassado}! (${totalAtual + 1})`);
-          await sleep(550);
-          await fecharAvisosPendentes();
-          return 'alterado';
-        }
-        log(`⏭️ Ticket ${labelId} já estava ${verboPassado}.`);
-        await fecharMenuTicket(wrap, alvo);
-        return 'pulado';
-      },
-      aoErro: async (alvo) => {
-        const wrap = alvo.closest('.ticket-menu') || alvo.parentElement;
-        await fecharMenuTicket(wrap, alvo);
-      }
-    });
-  }
-
-  async function executarEscreverParaTodos(texto) {
-    if (rodando) return;
-    const mensagem = (texto || msgEl.value).trim();
-    if (!mensagem) {
-      log('⚠️ Digite uma mensagem antes de iniciar.');
-      msgEl.focus();
-      return;
-    }
-    CONFIG.mensagem = mensagem;
-    await percorrerItensFila({
-      modo: 'escrever',
-      seletor: 'article.chat-list-item',
-      tituloInicio: 'Escrevendo para todos os clientes',
-      tituloBarra: 'Enviando mensagem...',
-      verboPassado: 'enviado',
-      processarItem: async (card, chave, totalAtual, scrollContainer) => {
-        const nome = card.getAttribute('aria-label') || chave;
-        rolarCardNoContainer(card, scrollContainer);
-        await sleep(120);
-        clickUnico(card);
-        log(`👤 [${totalAtual + 1}] ${nome}`);
-        await sleep(Math.max(800, CONFIG.delayTrocaTicket));
-        if (!(await aguardarPausaSeNecessario())) return 'parado';
-        await enviarTextoNoChat(mensagem);
-        return 'alterado';
-      }
-    });
-  }
-
-  /* ========================================================
-     LOTE ENVIAR + FINALIZAR (v10.1)
-     - Um ticket por vez, pelo número do ticket (menu-<id>), relendo a lista a cada cliente e rolando
-       para o Blip carregar mais (antes só tratava o que estava carregado ou ficava preso).
-     - Problema num cliente = pula, registra o motivo e segue. Nunca reenvia: quem recebeu fica 24 h na memória,
-       gravada ANTES do Enter (se o PC cair no meio, o ticket fica "incerto" e não recebe de novo).
-     - Enviou mas a tag/finalizar falhou = "enviado, NÃO finalizado" + fecha o que ficou aberto.
-     - LOTE_FALHAS_SEGUIDAS problemas seguidos = o lote PAUSA (problema geral) e espera você.
-     ======================================================== */
-  let loteRegistros = [];
-  let loteInicio = '';
-  function loteLerMemoria() {
-    try {
-      const o = JSON.parse(localStorage.getItem(LOTE_MEMORIA_CHAVE) || '{}');
-      return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
-    } catch {
-      return {};
-    }
-  }
-  function loteGravarMemoria(id, estado) {
-    const agora = Date.now();
-    const o = loteMemoriaLimpar(loteLerMemoria(), agora);
-    o[id] = { estado, ts: agora };
-    try { localStorage.setItem(LOTE_MEMORIA_CHAVE, JSON.stringify(o)); } catch {}
-  }
-  function loteRegistrar(id, resultado, motivo) {
-    loteRegistros.push({ id, resultado, motivo: motivo || '', hora: new Date().toLocaleTimeString('pt-BR') });
-    try {
-      localStorage.setItem(LOTE_RELATORIO_CHAVE, JSON.stringify({ inicio: loteInicio, registros: loteRegistros }));
-    } catch {}
-  }
-
-  // Fecha o que pode ter ficado aberto (lista de tags, modal de finalizar) para não travar o próximo cliente.
-  // Deduzido, não confirmado no Blip real: Esc fecha a lista de tags; o modal tem um botão "Cancelar".
-  async function loteFecharSobras() {
-    const esc = { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, composed: true };
-    try {
-      (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', esc));
-      document.dispatchEvent(new KeyboardEvent('keydown', esc));
-    } catch {}
-    await sleep(300);
-    for (const m of document.querySelectorAll('bds-modal, [role="dialog"]')) {
-      if (p.contains(m) || !modalAberto(m)) continue;
-      const cancelar = [...m.querySelectorAll('bds-button, button')]
-        .find(b => /cancelar/i.test(autoTextoComposto(b) || b.textContent || ''));
-      if (cancelar) {
-        (cancelar.shadowRoot?.querySelector('button') || cancelar).click();
-        log('🧹 Fechei uma janela que ficou aberta (Cancelar).');
-        await sleep(400);
-      }
-    }
-    await fecharAvisosPendentes();
-  }
-
-  // Um ticket: { resultado: 'finalizado'|'parcial'|'incerto'|'pulado'|'falha'|'simulado', motivo }
-  async function loteProcessarTicket(id, op) {
-    const msg = op.mensagem;
-    if (loteJaRecebeu(loteLerMemoria(), id)) return { resultado: 'pulado', motivo: 'já recebeu a mensagem antes (memória 24 h)' };
-    const card = autoCardDoTicket(autoBotaoMenu(id));
-    if (!card) return { resultado: 'pulado', motivo: 'o ticket saiu da lista' };
-    card.scrollIntoView?.({ block: 'nearest' });
-    if (autoIndicioChatAtivo(id) === null) clickUnico(card);
-    const indicio = await waitFor(() => autoIndicioChatAtivo(id), AUTO_T.chatAtivo, 200).catch(() => null);
-    if (!indicio) return { resultado: 'falha', motivo: 'o chat deste ticket não abriu; nada enviado' };
-    const campoLivre = () => {
-      const el = autoCampoTexto();
-      return el && !el.disabled && isElementoVisivel(el) ? el : null;
-    };
-    const input = await waitFor(campoLivre, AUTO_T.campo, 200).catch(() => null);
-    if (!input) return { resultado: 'pulado', motivo: 'campo de mensagem indisponível (cliente em espera ou chat bloqueado)' };
-    if (autoTemRascunho(msg)) return { resultado: 'pulado', motivo: 'o chat tem um texto digitado (rascunho); nada foi trocado' };
-
-    if (input.value !== msg) await preencherCampoMensagem(input, msg);
-    if (autoCampoTexto() !== input || autoIndicioChatAtivo(id) === null) {
-      autoLimparSeNosso(input, msg);
-      return { resultado: 'falha', motivo: 'o chat aberto mudou durante o preenchimento; nada enviado' };
-    }
-    if (input.value !== msg) return { resultado: 'falha', motivo: 'o texto do campo foi alterado; nada enviado' };
-    if (op.simular) {
-      autoLimparSeNosso(input, msg);
-      return { resultado: 'simulado', motivo: 'texto preenchido e apagado; nada enviado' };
-    }
-
-    loteGravarMemoria(id, 'enviando'); // antes do Enter: se tudo cair agora, este ticket nunca é reenviado
-    const antes = autoContarOcorrencias(msg);
-    dispararEnvioEnter(input);
-    const envio = await autoConfirmarEnvio(input, msg, antes);
-    if (envio === 'nao_enviado') {
-      autoLimparSeNosso(input, msg);
-      loteGravarMemoria(id, 'nao_enviado');
-      return { resultado: 'falha', motivo: 'o envio não ocorreu (o texto ficou no campo); nada enviado' };
-    }
-    if (envio !== 'confirmado') {
-      loteGravarMemoria(id, 'incerto');
-      return { resultado: 'incerto', motivo: 'envio sem confirmação na tela; confira (não será reenviado)' };
-    }
-    loteGravarMemoria(id, 'parcial');
-    log(`✉️ #${id}: mensagem enviada e confirmada.`);
-
-    try {
-      await passo2_tag(op.tag);
-      await passo3_finalizar();
-      await passo4_confirmarModal();
-    } catch (err) {
-      await loteFecharSobras();
-      return { resultado: 'parcial', motivo: 'não finalizou: ' + ((err && err.message) || err) };
-    }
-    // Deduzido: depois de finalizar, o ticket sai da lista (ou o chat dele deixa de estar aberto).
-    const fechou = await waitFor(() => !autoBotaoMenu(id) || autoIndicioChatAtivo(id) === null, 8000, 250)
-      .then(() => true).catch(() => false);
-    if (!fechou) {
-      await loteFecharSobras();
-      return { resultado: 'parcial', motivo: 'cliquei em finalizar, mas o ticket continua aberto' };
-    }
-    loteGravarMemoria(id, 'finalizado');
-    return { resultado: 'finalizado', motivo: '' };
-  }
-
-  const LOTE_ICONES = { finalizado: '🎉', simulado: '🧪', parcial: '⚠️', incerto: '❓', pulado: '⏭️', falha: '❌' };
-
-  async function loteEnviarFinalizar({ mensagem, tag, simular }) {
-    if (rodando) return;
-    rodando = true;
-    pausado = false;
-    modoAtual = 'atender';
-    loteRegistros = [];
-    loteInicio = new Date().toLocaleString('pt-BR');
-    atualizarBotoesEstado(true, simular ? '🧪 Simulando (nada é enviado)...' : 'Enviando e finalizando...');
-    cntEl.textContent = '0';
-    log(`▶ ${simular ? '🧪 SIMULAÇÃO de Enviar + Finalizar' : 'Enviar + Finalizar'} iniciado (${LOTE_VERSAO}). Tag: "${tag}".`);
-    await ativarWakeLock();
-    const tentados = new Set();
-    let rolagens = 0;
-    let seguidas = 0;
-    let feitos = 0;
-    try {
-      const inicial = autoColetarTickets();
-      log(`📋 ${inicial.ids.length} cliente(s) carregados na lista agora; o bot rola a lista para buscar o resto.`);
-      while (rodando) {
-        if (!(await aguardarPausaSeNecessario())) break;
-        const id = loteEscolherProximo(autoColetarTickets().ids, tentados);
-        if (!id) {
-          if (rolagens >= LOTE_ROLAGENS_FIM) break;
-          rolagens++;
-          log(`⏳ Procurando mais clientes na lista (${rolagens}/${LOTE_ROLAGENS_FIM})...`);
-          await rolarFila();
-          await sleep(1500);
-          continue;
-        }
-        rolagens = 0;
-        tentados.add(id);
-        log(`━━━ Ticket #${id} (${tentados.size}º) ━━━`);
-        let r;
-        try {
-          r = await loteProcessarTicket(id, { mensagem, tag, simular });
-        } catch (err) {
-          await loteFecharSobras().catch(() => {});
-          r = { resultado: 'falha', motivo: (err && err.message) || String(err) };
-        }
-        loteRegistrar(id, r.resultado, r.motivo);
-        log(`${LOTE_ICONES[r.resultado] || '•'} #${id}: ${LOTE_ESTADOS_TEXTO[r.resultado] || r.resultado}${r.motivo ? ` — ${r.motivo}` : ''}.`);
-        if (r.resultado === 'finalizado' || r.resultado === 'simulado') {
-          feitos++;
-          cntEl.textContent = feitos;
-        }
-        seguidas = ['falha', 'parcial', 'incerto'].includes(r.resultado) ? seguidas + 1 : 0;
-        if (seguidas >= LOTE_FALHAS_SEGUIDAS && rodando) {
-          pausado = true;
-          btnPause.textContent = '▶ Retomar';
-          log(`✋ ${seguidas} clientes seguidos com problema: lote PAUSADO. Confira a tela do Blip e clique em Retomar (ou Parar).`);
-          seguidas = 0;
-        }
-        await sleep(CONFIG.delayTrocaTicket);
-      }
-      if (rodando) log('🏁 Não há mais clientes na lista.');
-    } catch (err) {
-      log(`❌ Falha geral, lote parado: ${(err && err.message) || err}`);
-    } finally {
-      rodando = false;
-      pausado = false;
-      modoAtual = null;
-      await liberarWakeLock();
-      atualizarBotoesEstado(false);
-      log(`📊 Resumo: ${loteResumo(loteRegistros).texto}.`);
-      const problemas = loteRegistros.filter(x => x.resultado !== 'finalizado' && x.resultado !== 'simulado');
-      for (const x of problemas.slice(0, 30)) log(`   #${x.id}: ${LOTE_ESTADOS_TEXTO[x.resultado]}${x.motivo ? ` — ${x.motivo}` : ''}`);
-      if (problemas.length > 30) log(`   ... e mais ${problemas.length - 30}. Veja tudo em 📄 Relatório.`);
-      log('⏹ Automação parada.');
-      logSalvarAgora();
-    }
-  }
-
-  function obterCamposPainel(exigirTag = true) {
-    const mensagem = msgEl.value.trim();
-    if (!mensagem) {
-      log("⚠️ Digite uma mensagem na caixa antes de iniciar.");
-      msgEl.focus();
-      return null;
-    }
-    CONFIG.mensagem = mensagem;
-    let tag = tagEl.value.trim();
-    if (exigirTag) {
-      if (!tag) {
-        log("⚠️ Digite o nome da tag na caixa antes de iniciar.");
-        tagEl.focus();
-        return null;
-      }
-      CONFIG.tagBusca = tag;
-    }
-    return { mensagem, tag };
-  }
-
-  btnBaixarLog.onclick = () => {
-    logSalvarAgora();
-    const linhas = logLerSalvo();
-    if (!linhas.length) { log('ℹ️ Ainda não há log salvo.'); return; }
-    baixarArquivo(`rodbot-log_${carimboArquivo()}.txt`, linhas.join('\r\n') + '\r\n', 'text/plain;charset=utf-8');
-  };
-  btnBaixarRelatorio.onclick = () => {
-    let dados = null;
-    try { dados = JSON.parse(localStorage.getItem(LOTE_RELATORIO_CHAVE) || 'null'); } catch {}
-    const regs = (dados && Array.isArray(dados.registros)) ? dados.registros : loteRegistros;
-    if (!regs.length) { log('ℹ️ Nenhum lote Enviar + Finalizar registrado ainda.'); return; }
-    baixarArquivo(`rodbot-relatorio_${carimboArquivo()}.csv`, loteCsv(regs), 'text/csv;charset=utf-8');
-    log(`📄 Relatório baixado (lote de ${(dados && dados.inicio) || 'agora'}: ${loteResumo(regs).texto}).`);
-  };
-
-  btnModeEnviar.onclick = () => definirModoChave('enviar');
-  btnModeFinalizar.onclick = () => definirModoChave('finalizar');
-  btnFillDefault.onclick = () => {
-    if (rodando) return;
-    msgEl.value = MENSAGEM_PADRAO;
-    CONFIG.mensagem = MENSAGEM_PADRAO;
-    msgEl.focus();
-    log("📋 Mensagem padrão preenchida.");
-  };
-
-  btnMoveFolder.onclick = () => {
-    if (rodando || autoBloqueiaOutras()) return;
-    executarMoverParaPastaTodos(folderEl.value);
-  };
-
-  btnPlay.onclick = () => {
-    if (rodando || autoBloqueiaOutras()) return;
-    const ehFinalizar = modoChave === 'finalizar';
-    const campos = obterCamposPainel(ehFinalizar);
-    if (!campos) return;
-    if (ehFinalizar) {
-      const simular = !!simularEl?.checked;
-      const naTela = autoColetarTickets().ids.length;
-      const ok = simular || confirm(
-        `⚠️ MODO ENVIAR + FINALIZAR (ENVIO REAL)\n\nIsso vai enviar a mensagem, aplicar a tag "${campos.tag}" e FINALIZAR todos os tickets da lista (${naTela} carregados agora; o bot rola para buscar o resto).\n\nDica: rode antes com "Simular" marcado.\n\nDeseja iniciar agora?`
-      );
-      if (!ok) {
-        log("⚠️ Ação cancelada pelo usuário.");
-        return;
-      }
-      loteEnviarFinalizar({ mensagem: campos.mensagem, tag: campos.tag, simular });
-    } else {
-      executarEscreverParaTodos(campos.mensagem);
-    }
-  };
 
   function alternarPausa() {
     if (!rodando) return;
@@ -2204,534 +1305,86 @@
     return { host, inner, disabled: isHostDisabled || isInnerDisabled };
   }
 
-  async function executarAtendimentoAutomatico() {
-    if (rodando) return;
-    rodando = true;
-    pausado = false;
-    modoAtual = 'claim';
-    ativarWakeLock();
-    atualizarBotoesEstado(true, 'Atendendo fila (0.5s)...');
-    cntEl.textContent = '0';
-    let solicitados = 0;
-
-    const countInicial = obterContagemFila();
-    log(`🚀 Iniciando atendimento automático a cada 0.5s (Fila atual: ${countInicial !== null ? countInicial : 'lendo...'})`);
-
-    try {
-      while (rodando) {
-        if (!(await aguardarPausaSeNecessario())) break;
-
-        const countAtual = obterContagemFila();
-        atualizarBadgeFila();
-
-        if (countAtual !== null && countAtual <= 0) {
-          log('🎉 A contagem da fila chegou a 0! Finalizado.');
-          break;
-        }
-
-        const btnInfo = obterBotaoAtender();
-        if (!btnInfo || !btnInfo.host) {
-          log('⚠️ Botão "Atender" (#claim-ticket-button) não encontrado na tela.');
-          break;
-        }
-
-        if (btnInfo.disabled) {
-          if (countAtual !== null && countAtual <= 0) {
-            log('🎉 Fila zerada!');
-            break;
-          }
-          await sleep(250);
-          continue;
-        }
-
-        const clickTarget = btnInfo.inner || btnInfo.host;
-        dispararCliqueReal(clickTarget);
-        if (btnInfo.host !== clickTarget) {
-          dispararCliqueReal(btnInfo.host);
-        }
-
-        solicitados++;
-        cntEl.textContent = solicitados;
-        const countRest = obterContagemFila();
-        const infoRest = countRest !== null ? ` | Fila: ${countRest}` : '';
-        log(`📥 [${solicitados}] Atender clicado${infoRest}`);
-
-        if (countRest !== null && countRest <= 0) {
-          log('🎉 A contagem da fila chegou a 0! Finalizado.');
-          break;
-        }
-
-        await sleep(500);
-      }
-    } catch (err) {
-      log(`❌ Erro no atendimento automático: ${err.message}`);
-    } finally {
-      rodando = false;
-      pausado = false;
-      modoAtual = null;
-      await liberarWakeLock();
-      atualizarBotoesEstado(false);
-      atualizarBadgeFila();
-      log(`🏁 Atendimento automático finalizado. Total solicitados: ${solicitados}.`);
-    }
-  }
-
-  /* ========================================================
-     PILOTO AUTOMÁTICO - PIPELINE VISUAL & LOOP CONTÍNUO
-     ======================================================== */
-  let pilotoCiclo = 0;
-
-  function resetarStepper() {
-    atualizarStepper(1, 'idle', 'Aguardando');
-    atualizarStepper(2, 'idle', 'Pendente');
-    atualizarStepper(3, 'idle', 'Pendente');
-    atualizarStepper(4, 'idle', 'Pendente');
-  }
-
-  function atualizarStepper(stepNum, status, badgeText) {
-    const stepEl = document.getElementById(`ba-step-${stepNum}`);
-    const statusEl = document.getElementById(`ba-status-${stepNum}`);
-    if (stepEl) stepEl.setAttribute('data-status', status);
-    if (statusEl && badgeText) statusEl.textContent = badgeText;
-  }
-
-  async function pilotoEtapa1_PuxarFila() {
-    atualizarStepper(1, 'active', 'Verificando fila...');
-    log('📥 [Etapa 1/4] Verificando fila de atendimento...');
-
-    let count = obterContagemFila();
-    atualizarBadgeFila();
-
-    // Se a fila já está zerada (0)
-    if (count !== null && count <= 0) {
-      const chatsAbertos = document.querySelectorAll('article.chat-list-item, button.ticket-info-options').length;
-      if (chatsAbertos > 0) {
-        log(`ℹ️ Fila zerada (0), porém há ${chatsAbertos} ticket(s) ativo(s) na tela. Prosseguindo...`);
-        atualizarStepper(1, 'done', 'Fila zerada (0)');
-        return true;
-      }
-
-      // Modo Sentinela se não há clientes
-      atualizarStepper(1, 'waiting', '👁️ Sentinela: fila vazia');
-      setSt('👁️ Sentinela', '#f59e0b');
-      const loopDesc = document.getElementById('ba-loop-desc');
-      if (loopDesc) loopDesc.textContent = '👁️ Fila zerada (0). Sentinela vigiando até surgir novo cliente (1+)...';
-      log('👁️ [Sentinela] Fila zerada (0). Aguardando novo cliente na fila...');
-
-      while (rodando) {
-        if (!(await aguardarPausaSeNecessario())) return false;
-        await sleep(1500);
-        count = obterContagemFila();
-        atualizarBadgeFila();
-        if (count !== null && count > 0) {
-          log(`🔔 [Sentinela] Detectado(s) ${count} cliente(s) na fila! Iniciando atendimento...`);
-          setSt('Rodando', '#16a34a');
-          if (loopDesc) loopDesc.textContent = `Ciclo #${pilotoCiclo} em andamento. Puxando ${count} cliente(s)...`;
-          break;
-        }
-      }
-      if (!rodando) return false;
-    }
-
-    atualizarStepper(1, 'active', `Puxando (${count ?? '...'})`);
-    let solicitados = 0;
-
-    while (rodando) {
-      if (!(await aguardarPausaSeNecessario())) return false;
-
-      const cAtual = obterContagemFila();
-      atualizarBadgeFila();
-      if (cAtual !== null && cAtual <= 0) {
-        log('🎉 A contagem da fila chegou a 0!');
-        break;
-      }
-
-      const btnInfo = obterBotaoAtender();
-      if (!btnInfo || !btnInfo.host) {
-        log('⚠️ Botão "Atender" (#claim-ticket-button) não localizado.');
-        break;
-      }
-
-      if (btnInfo.disabled) {
-        if (cAtual !== null && cAtual <= 0) break;
-        await sleep(250);
-        continue;
-      }
-
-      const target = btnInfo.inner || btnInfo.host;
-      dispararCliqueReal(target);
-      if (btnInfo.host !== target) dispararCliqueReal(btnInfo.host);
-
-      solicitados++;
-      cntEl.textContent = solicitados;
-      atualizarStepper(1, 'active', `Puxando (Restam: ${cAtual !== null ? cAtual : '?'})`);
-      log(`📥 [Atender #${solicitados}]${cAtual !== null ? ` Fila atual: ${cAtual}` : ''}`);
-
-      const rest = obterContagemFila();
-      if (rest !== null && rest <= 0) {
-        log('🎉 A contagem da fila chegou a 0!');
-        break;
-      }
-
-      await sleep(500);
-    }
-
-    atualizarStepper(1, 'done', 'Fila zerada (0)');
-    log('⏳ Aguardando tickets renderizarem no painel...');
-    await sleep(1600);
-    return true;
-  }
-
-  async function pilotoEtapa2_EnviarMensagens() {
-    const mensagem = (CONFIG.mensagem || pilotMsgEl?.value || msgEl?.value || '').trim();
-    if (!mensagem) {
-      log('ℹ️ Nenhuma mensagem definida no piloto. Avançando...');
-      atualizarStepper(2, 'done', 'Sem mensagem');
-      return true;
-    }
-
-    atualizarStepper(2, 'active', 'Carregando chats...');
-    log('✉️ [Etapa 2/4] Enviando mensagem em todos os chats ativos...');
-
-    const processados = new Set();
-    let enviados = 0;
-    let scrollContainer = obterScrollContainerGeral();
-    let tentativasVazio = 0;
-
-    while (rodando) {
-      if (!(await aguardarPausaSeNecessario())) return false;
-
-      const cards = [...document.querySelectorAll('article.chat-list-item')];
-      if (cards.length === 0) {
-        tentativasVazio++;
-        if (tentativasVazio <= 3) {
-          await sleep(800);
-          continue;
-        }
-        log('ℹ️ Nenhum chat ativo encontrado para envio de mensagem.');
-        break;
-      }
-
-      let alvo = null;
-      let chave = '';
-      for (let i = 0; i < cards.length; i++) {
-        const c = cards[i];
-        const k = obterChaveElemento(c, i);
-        if (!processados.has(k)) {
-          alvo = c;
-          chave = k;
-          break;
-        }
-      }
-
-      if (!alvo) break;
-
-      processados.add(chave);
-      tentativasVazio = 0;
-      const nome = alvo.getAttribute('aria-label') || chave;
-      atualizarStepper(2, 'active', `Enviando (${enviados + 1})`);
-
-      rolarCardNoContainer(alvo, scrollContainer);
-      await sleep(150);
-      clickUnico(alvo);
-      log(`👤 [${enviados + 1}] Chat selecionado: ${nome}`);
-      await sleep(Math.max(800, CONFIG.delayTrocaTicket));
-
-      if (!(await aguardarPausaSeNecessario())) return false;
-
-      try {
-        await enviarTextoNoChat(mensagem);
-        enviados++;
-        cntEl.textContent = enviados;
-      } catch (err) {
-        log(`⚠️ Não foi possível enviar texto para ${nome}: ${err.message}`);
-        await fecharAvisosPendentes();
-      }
-
-      await sleep(CONFIG.delayAcoes);
-    }
-
-    atualizarStepper(2, 'done', `Enviados (${enviados})`);
-    log(`✅ [Etapa 2/4 Concluída] Mensagens enviadas: ${enviados}.`);
-    await sleep(600);
-    return true;
-  }
-
-  async function pilotoEtapa3_PausarTodos() {
-    atualizarStepper(3, 'active', 'Localizando tickets...');
-    log('⏸️ [Etapa 3/4] Colocando todos os clientes em espera (standby)...');
-
-    const processados = new Set();
-    let pausados = 0;
-    let jaPausados = 0;
-    let scrollContainer = obterScrollContainerGeral();
-    let tentativasVazio = 0;
-
-    while (rodando) {
-      if (!(await aguardarPausaSeNecessario())) return false;
-
-      const botoes = [...document.querySelectorAll('button.ticket-info-options')];
-      if (botoes.length === 0) {
-        tentativasVazio++;
-        if (tentativasVazio <= 3) {
-          await sleep(800);
-          continue;
-        }
-        log('ℹ️ Nenhum ticket encontrado para pausar.');
-        break;
-      }
-
-      let alvo = null;
-      let chave = '';
-      for (let i = 0; i < botoes.length; i++) {
-        const b = botoes[i];
-        const k = obterChaveElemento(b, i);
-        if (!processados.has(k)) {
-          alvo = b;
-          chave = k;
-          break;
-        }
-      }
-
-      if (!alvo) break;
-
-      processados.add(chave);
-      tentativasVazio = 0;
-
-      const wrap = alvo.closest('.ticket-menu') || alvo.parentElement;
-      const card = alvo.closest('article.chat-list-item, [class*="chat-list-item"], [class*="ticket"]') || wrap;
-      const labelId = alvo.id ? `#${alvo.id.replace('menu-', '')}` : chave;
-
-      atualizarStepper(3, 'active', `Pausando (${pausados + 1})`);
-      rolarCardNoContainer(card, scrollContainer);
-      card?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-      card?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-      wrap?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-      await sleep(120);
-
-      clickUnico(alvo);
-
-      const acaoEncontrada = await waitFor(() => {
-        const t = encontrarOpcaoMenu(wrap, 'option-setStandbyMode');
-        if (t) return { tipo: 'alvo', el: t };
-        const o = encontrarOpcaoMenu(wrap, 'option-unsetStandbyMode');
-        if (o) return { tipo: 'oposto', el: o };
-        return null;
-      }, 3500, 100);
-
-      if (!(await aguardarPausaSeNecessario())) {
-        await fecharMenuTicket(wrap, alvo);
-        return false;
-      }
-
-      if (acaoEncontrada && acaoEncontrada.tipo === 'alvo') {
-        const innerBtn = acaoEncontrada.el.shadowRoot?.querySelector('button.menuaction__button, button') || acaoEncontrada.el;
-        await sleep(150);
-        clickUnico(innerBtn);
-        pausados++;
-        cntEl.textContent = pausados;
-        log(`⏸️ Ticket ${labelId} colocado em espera! (${pausados})`);
-        await sleep(550);
-        await fecharAvisosPendentes();
-      } else {
-        jaPausados++;
-        log(`⏭️ Ticket ${labelId} já estava em espera.`);
-        await fecharMenuTicket(wrap, alvo);
-      }
-
-      await sleep(CONFIG.delayAcoes);
-    }
-
-    atualizarStepper(3, 'done', `Pausados (${pausados})`);
-    log(`✅ [Etapa 3/4 Concluída] ${pausados} ticket(s) pausado(s)${jaPausados ? `, ${jaPausados} já estavam pausados` : ''}.`);
-    await sleep(600);
-    return true;
-  }
-
-  async function pilotoEtapa4_MandarPraPasta() {
-    const pasta = (CONFIG.pastaDestino || pilotFolderEl?.value || folderEl?.value || '').trim();
-    if (!pasta) {
-      log('⚠️ Nenhuma pasta configurada. Pulando movimentação...');
-      atualizarStepper(4, 'done', 'Sem pasta');
-      return true;
-    }
-
-    const alvoNorm = normalizarTexto(pasta);
-    atualizarStepper(4, 'active', `Movendo → ${pasta}`);
-    log(`📁 [Etapa 4/4] Movendo todos os tickets para a pasta "${pasta}"...`);
-
-    let alterados = 0;
-    let pulados = 0;
-    const falhasSeguidas = new Map();
-    let tentativasSemTickets = 0;
-
-    while (rodando) {
-      if (!(await aguardarPausaSeNecessario())) return false;
-
-      const lista = [...document.querySelectorAll('button.ticket-info-options')];
-      if (lista.length === 0) {
-        tentativasSemTickets++;
-        if (tentativasSemTickets <= 4) {
-          log(`⏳ Carregando fila (${tentativasSemTickets}/4)...`);
-          await rolarFila();
-          await sleep(1200);
-          continue;
-        }
-        log('🏁 Todos os tickets foram movidos para a pasta!');
-        break;
-      }
-
-      let alvo = null;
-      let chave = '';
-      for (let i = 0; i < lista.length; i++) {
-        const item = lista[i];
-        const k = obterChaveElemento(item, i);
-        const falhas = falhasSeguidas.get(k) || 0;
-        if (falhas < 2) {
-          alvo = item;
-          chave = k;
-          break;
-        }
-      }
-
-      if (!alvo) {
-        tentativasSemTickets++;
-        if (tentativasSemTickets <= 3) {
-          log(`⏳ Carregando tickets (${tentativasSemTickets}/3)...`);
-          await rolarFila();
-          await sleep(1400);
-          continue;
-        }
-        log('🏁 Todos os tickets restantes foram movidos ou pulados.');
-        break;
-      }
-
-      tentativasSemTickets = 0;
-      const labelId = alvo.id ? `#${alvo.id.replace('menu-', '')}` : chave;
-
-      try {
-        const res = await processarMoverTicket(alvo, pasta, alvoNorm, labelId, alterados);
-        if (res === 'alterado') {
-          alterados++;
-          cntEl.textContent = alterados;
-          atualizarStepper(4, 'active', `Movidos: ${alterados}`);
-          falhasSeguidas.delete(chave);
-        } else {
-          pulados++;
-          const f = falhasSeguidas.get(chave) || 0;
-          falhasSeguidas.set(chave, f + 1);
-        }
-      } catch (err) {
-        log(`❌ Erro no ticket ${labelId}: ${err.message}`);
-        pulados++;
-        const f = falhasSeguidas.get(chave) || 0;
-        falhasSeguidas.set(chave, f + 1);
-        await fecharAvisosPendentes();
-      }
-
-      await sleep(CONFIG.delayAcoes);
-    }
-
-    atualizarStepper(4, 'done', `Movidos (${alterados})`);
-    log(`✅ [Etapa 4/4 Concluída] ${alterados} ticket(s) movido(s) para "${pasta}"${pulados ? `, ${pulados} pulado(s)` : ''}.`);
-    await sleep(600);
-    return true;
-  }
-
-  async function executarPilotoLoop() {
-    if (rodando) {
-      rodando = false;
-      pausado = false;
-      log('⏹ Interrompendo piloto automático...');
-      return;
-    }
-
-    const pasta = (CONFIG.pastaDestino || pilotFolderEl?.value || folderEl?.value || '').trim();
-    if (!pasta) {
-      log('⚠️ Digite o nome da pasta de destino antes de iniciar o Piloto.');
-      if (pilotFolderEl) pilotFolderEl.focus();
-      return;
-    }
-    CONFIG.pastaDestino = pasta;
-    saveRecentFolder(pasta);
-
-    const msg = (CONFIG.mensagem || pilotMsgEl?.value || msgEl?.value || '').trim();
-    CONFIG.mensagem = msg;
-
-    rodando = true;
-    pausado = false;
-    modoAtual = 'piloto';
-    pilotoCiclo = 0;
-    ativarWakeLock();
-    atualizarBotoesEstado(true, '⚡ Piloto Contínuo');
-
-    const loopCard = document.getElementById('ba-loop-card');
-    if (loopCard) loopCard.classList.add('active');
-
-    const loopDesc = document.getElementById('ba-loop-desc');
-
-    log('🚀 PILOTO AUTOMÁTICO INICIADO EM LOOP CONTÍNUO!');
-    log(`📂 Pasta Destino: "${pasta}" | ✉️ Mensagem: ${msg ? 'Ativa' : 'Desativada (apenas mover)'}`);
-
-    try {
-      while (rodando) {
-        pilotoCiclo++;
-        const cycleBadge = document.getElementById('ba-pilot-cycle-badge');
-        if (cycleBadge) cycleBadge.textContent = `Ciclo: #${pilotoCiclo}`;
-        if (loopDesc) loopDesc.textContent = `Ciclo #${pilotoCiclo} em andamento. Executando as 4 etapas...`;
-
-        log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        log(`🔄 INICIANDO CICLO #${pilotoCiclo} DO PILOTO`);
-        log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-
-        resetarStepper();
-
-        // 1. Puxar fila até zerar (sentinela se tiver 0)
-        const ok1 = await pilotoEtapa1_PuxarFila();
-        if (!ok1 || !rodando) break;
-
-        // 2. Só enviar mensagem sem finalizar
-        const ok2 = await pilotoEtapa2_EnviarMensagens();
-        if (!ok2 || !rodando) break;
-
-        // 3. Pausar todos os clientes
-        const ok3 = await pilotoEtapa3_PausarTodos();
-        if (!ok3 || !rodando) break;
-
-        // 4. Mover todos para a pasta configurada
-        const ok4 = await pilotoEtapa4_MandarPraPasta();
-        if (!ok4 || !rodando) break;
-
-        log(`🎉 Ciclo #${pilotoCiclo} concluído com sucesso!`);
-        if (loopDesc) loopDesc.textContent = `Ciclo #${pilotoCiclo} concluído! Verificando fila para o próximo ciclo...`;
-        await sleep(1000);
-      }
-    } catch (err) {
-      log(`❌ Erro no loop do piloto: ${err.message}`);
-    } finally {
-      rodando = false;
-      pausado = false;
-      modoAtual = null;
-      await liberarWakeLock();
-      atualizarBotoesEstado(false);
-      resetarStepper();
-
-      if (loopCard) loopCard.classList.remove('active');
-      if (loopDesc) loopDesc.textContent = 'Repete o fluxo. Se fila = 0, vigia até surgir 1 ou + clientes.';
-      log(`🏁 Piloto automático parado. Total de ciclos: ${pilotoCiclo}.`);
-    }
-  }
-
-  btnPilotStart.onclick = () => {
-    if (!rodando && autoBloqueiaOutras()) return;
-    executarPilotoLoop();
-  };
-
-  btnClaimAuto.onclick = () => {
-    if (rodando || autoBloqueiaOutras()) return;
-    executarAtendimentoAutomatico();
-  };
-
+/* Velocidade (função pura, sem DOM). Spec §7 e §8.
+ *
+ * Faixa 0.5 a 2.0, passo 0.1, padrão 1.0 (= tempos de hoje). Maior = mais rápido:
+ * pausa efetiva = pausa atual ÷ velocidade, com piso de 50% da pausa atual (por isso 2.0 é o máximo).
+ * Só vale para as pausas de RITMO entre ações (ver docs/plano/pausas.md). A pausa entre ciclos não muda.
+ */
+
+const VEL_MIN = 0.5;
+const VEL_MAX = 2;
+const VEL_PADRAO = 1;
+const CICLO_MIN_S = 0;
+const CICLO_MAX_S = 60;
+const CICLO_PADRAO_S = 1;
+
+function velNumero(entrada) {
+  if (typeof entrada === 'number') return entrada;
+  if (typeof entrada !== 'string') return NaN;
+  const t = entrada.trim().replace(',', '.');
+  return t === '' || !/^-?\d*\.?\d+$/.test(t) ? NaN : Number(t);
+}
+
+function velVazia(entrada) {
+  return entrada === null || entrada === undefined || (typeof entrada === 'string' && entrada.trim() === '');
+}
+
+// Para o campo: devolve o valor corrigido e o aviso a mostrar (null quando não houve correção).
+function normalizarVelocidade(entrada) {
+  if (velVazia(entrada)) return { valor: VEL_PADRAO, aviso: null };
+  const n = velNumero(entrada);
+  if (!Number.isFinite(n)) return { valor: VEL_PADRAO, aviso: 'Valor inválido' };
+  if (n > VEL_MAX) return { valor: VEL_MAX, aviso: 'Máximo 2.0' };
+  if (n < VEL_MIN) return { valor: VEL_MIN, aviso: 'Mínimo 0.5' };
+  return { valor: Math.round(n * 10) / 10, aviso: null };
+}
+
+function pausa(msAtual, velocidade) {
+  const n = velNumero(velocidade);
+  const vel = Number.isFinite(n) ? Math.min(VEL_MAX, Math.max(VEL_MIN, n)) : VEL_PADRAO;
+  return Math.max(Math.round(msAtual / vel), Math.ceil(msAtual * 0.5));
+}
+
+function velocidadeDoPasso(passo, velocidadeFluxo) {
+  if (!passo || velVazia(passo.velocidade)) return velocidadeFluxo;
+  return normalizarVelocidade(passo.velocidade).valor;
+}
+
+function seloVelocidade(passo) {
+  if (!passo || velVazia(passo.velocidade)) return null;
+  return '×' + normalizarVelocidade(passo.velocidade).valor.toFixed(1);
+}
+
+// Pausa entre ciclos (§7): valor do usuário em segundos; a velocidade é ignorada de propósito.
+function pausaEntreCiclos(segundos /*, velocidade (ignorada) */) {
+  return Math.round(segundos * 1000);
+}
+
+function normalizarPausaCiclos(entrada) {
+  if (velVazia(entrada)) return { valor: CICLO_PADRAO_S, aviso: null };
+  const n = velNumero(entrada);
+  if (!Number.isFinite(n)) return { valor: CICLO_PADRAO_S, aviso: 'Valor inválido' };
+  if (n > CICLO_MAX_S) return { valor: CICLO_MAX_S, aviso: 'Máximo 60 s' };
+  if (n < CICLO_MIN_S) return { valor: CICLO_MIN_S, aviso: 'Mínimo 0 s' };
+  return { valor: Math.round(n * 10) / 10, aviso: null };
+}
+/* Pausas de RITMO entre ações (Tarefa 7, spec §8). Precisa de velocidade.js e de `sleep` (01-base.js).
+ *
+ * Só as pausas classificadas como "entra" em docs/plano/pausas.md chamam pausaAcao; as esperas de UI,
+ * polling, recuos e prazos continuam com sleep/waitFor. Com velocidade 1.0 nada muda.
+ */
+
+let velocidadeAtual = 1; // o motor define ao iniciar cada passo; o painel antigo usa 1.0
+
+function definirVelocidadeAtual(v) {
+  velocidadeAtual = normalizarVelocidade(v).valor;
+  return velocidadeAtual;
+}
+
+function pausaAcao(ms) {
+  return sleep(pausa(ms, velocidadeAtual));
+}
   /* ========================================================
      RESPOSTA AUTOMÁTICA A NOVOS CHATS
      Detecta chats que chegam à lista depois da ativação, envia a mensagem
@@ -2783,8 +1436,6 @@
   };
   const AUTO_IGNORAR_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SVG', 'TEMPLATE', 'NOSCRIPT']);
 
-  const autoMsgEl = document.getElementById('ba-auto-msg');
-  const autoToggleBtn = document.getElementById('ba-auto-toggle');
   const autoStateEl = document.getElementById('ba-auto-state');
   const autoCountEl = document.getElementById('ba-auto-count');
   const autoNativeEl = document.getElementById('ba-auto-native');
@@ -2794,7 +1445,6 @@
   const autoResumeBtn = document.getElementById('ba-auto-resume');
   const autoRetryPauseBtn = document.getElementById('ba-auto-retry-pause');
   const autoResetBtn = document.getElementById('ba-auto-reset');
-  const autoFillDefaultBtn = document.getElementById('ba-auto-fill-default');
   const autoPillEl = document.getElementById('ba-auto-pill');
 
   const auto = {
@@ -2821,7 +1471,8 @@
     obs: { fila: null, chip: null, typo: null, filtro: null },
     alvos: { fila: null, chip: null, typo: null, filtro: null },
     timerScan: null,
-    timerRecon: null
+    timerRecon: null,
+    consumidor: null        // fluxo 🆕/👥: recebe os ids novos no lugar do worker do Auto
   };
 
   function autoLerContador() {
@@ -2858,7 +1509,7 @@
   auto.contador = autoLerContador();
 
   function autoLerMensagem() {
-    return (autoMsgEl?.value || '').trim();
+    return ''; // o Auto antigo não envia mais nada sozinho: quem envia é o fluxo (🆕/👥)
   }
   function autoCampoTexto() {
     return document.querySelector(AUTO_SEL.campoTexto);
@@ -2970,7 +1621,8 @@
   function autoMotivoAbsorcao() {
     if (autoFiltroAberto()) return 'filtro aberto';
     if (Date.now() < auto.supressaoAte) return auto.motivoSupressao;
-    if (rodando && modoAtual !== 'claim') return 'outra automação do BM em execução';
+    // o próprio fluxo 🆕/👥 que consome o observador não é "outra automação" (seus cliques não revelam chats antigos)
+    if (rodando && modoAtual !== 'claim' && !(auto.consumidor && modoAtual === 'fluxo')) return 'outra automação do BM em execução';
     return '';
   }
 
@@ -3038,6 +1690,11 @@
         auto.contador++;
         autoSalvarContador();
         autoGravarTicket(id, { contado: true });
+        if (auto.consumidor) {
+          log(`🆕 Novo chat #${id} (total do BM: ${auto.contador}).`);
+          auto.consumidor(id);
+          continue;
+        }
         autoRegistrar(id, 'pendente', 'novo chat detectado');
         if (!auto.fila.some(it => it.id === id && !it.soPausa)) auto.fila.push({ id, soPausa: false });
         log(`🆕 Novo chat #${id} (total do BM: ${auto.contador}).`);
@@ -3485,7 +2142,7 @@
           auto.atual = null;
           autoRender();
         }
-        await sleep(AUTO_T.entreTickets);
+        await pausaAcao(AUTO_T.entreTickets);
       }
     } finally {
       auto.workerAtivo = false;
@@ -3494,15 +2151,12 @@
     }
   }
 
-  function autoAtivar() {
+  // consumidor: usado pelo fluxo 🆕/👥 (só o observador; quem processa é o motor, não o worker do Auto).
+  function autoAtivar(consumidor = null) {
     if (auto.ativo || auto.destruido) return;
-    if (!autoLerMensagem()) {
-      log('⚠️ Digite a mensagem automática antes de ativar.');
-      autoMsgEl?.focus();
-      autoRender();
-      return;
-    }
+    if (!consumidor) return; // só o fluxo 🆕/👥 ativa o observador
     auto.ativo = true;
+    auto.consumidor = consumidor;
     auto.gen++;
     auto.baselinePronta = false;
     auto.suspensa = '';
@@ -3516,13 +2170,15 @@
       autoGarantirObservers();
       autoReexaminar();
     }, AUTO_T.reconciliar);
-    log('▶ Resposta automática ativada. Registrando os chats atuais...');
+    log(consumidor ? '👁️ Vigiando chats novos. Registrando os chats atuais...' : '▶ Resposta automática ativada. Registrando os chats atuais...');
     autoReexaminar();
     autoRender();
   }
   function autoDesativar() {
     if (!auto.ativo) return;
+    const eraFluxo = !!auto.consumidor;
     auto.ativo = false;
+    auto.consumidor = null;
     auto.gen++;
     for (const [tipo, fn, opt] of AUTO_EVENTOS) document.removeEventListener(tipo, fn, opt);
     clearInterval(auto.timerRecon);
@@ -3538,7 +2194,7 @@
     }
     auto.suspensa = '';
     auto.aguardando = '';
-    log(`⏹ Resposta automática desativada. ${descartados.length} pendente(s) descartado(s).`);
+    log(eraFluxo ? '⏹ Vigia de chats novos encerrada.' : `⏹ Resposta automática desativada. ${descartados.length} pendente(s) descartado(s).`);
     if (auto.atual && !auto.atual.soPausa) {
       log(`ℹ️ Chat #${auto.atual.id} em andamento: se a mensagem já saiu, a pausa será concluída; senão, nada será enviado.`);
     }
@@ -3572,12 +2228,6 @@
     autoRender();
     autoAgendarWorker();
   }
-  function autoBloqueiaOutras() {
-    if (!auto.atual) return false;
-    log(`⚠️ Aguarde: a resposta automática está processando o chat #${auto.atual.id}.`);
-    return true;
-  }
-
   function autoRender() {
     if (auto.destruido || !autoStateEl) return;
     const pendentes = auto.fila.filter(it => !it.soPausa).length + (auto.atual && !auto.atual.soPausa ? 1 : 0);
@@ -3615,9 +2265,6 @@
     autoDetailEl.textContent = detalhe;
     autoDetailEl.setAttribute('data-tone', tom === 'err' || (auto.ultimoErro && auto.ativo) ? 'err' : tom === 'wait' ? 'wait' : '');
 
-    autoToggleBtn.textContent = auto.ativo ? '⏹ Desativar resposta automática' : '▶ Ativar resposta automática';
-    autoToggleBtn.style.background = auto.ativo ? '#ef4444' : '';
-    autoToggleBtn.style.color = auto.ativo ? '#ffffff' : '';
     autoResumeBtn.style.display = auto.suspensa ? '' : 'none';
     const temPausaPendente = [...auto.registros.values()].some(r => r.estado === 'falha_pausa');
     autoRetryPauseBtn.style.display = temPausaPendente ? '' : 'none';
@@ -3640,20 +2287,6 @@
     if (window.__rodBotAuto && window.__rodBotAuto.instancia === auto) delete window.__rodBotAuto;
   }
 
-  if (autoMsgEl) {
-    let salva = '';
-    try { salva = localStorage.getItem(AUTO_MSG_KEY) || ''; } catch {}
-    bindPanelInput(autoMsgEl, salva, val => {
-      try { localStorage.setItem(AUTO_MSG_KEY, val); } catch {}
-      if (!val.trim() && auto.ativo) autoRender();
-    });
-  }
-  autoFillDefaultBtn.onclick = () => {
-    autoMsgEl.value = MENSAGEM_PADRAO;
-    autoMsgEl.dispatchEvent(new Event('input', { bubbles: true }));
-    log('📋 Mensagem padrão carregada na resposta automática.');
-  };
-  autoToggleBtn.onclick = () => (auto.ativo ? autoDesativar() : autoAtivar());
   autoResumeBtn.onclick = () => autoRetomar();
   autoRetryPauseBtn.onclick = () => autoRepetirPausas();
   autoResetBtn.onclick = () => {
@@ -3681,7 +2314,7 @@
   autoRender();
 
   /* ========================================================
-     TRANSFERÊNCIA EM MASSA PARA ATENDENTE
+     TRANSFERÊNCIA PARA ATENDENTE OU FILA
      Sempre o PRIMEIRO ticket da lista atual: abre, transfere pelo modal do Blip,
      confirma uma única vez e só conta quando o ticket sai da lista.
      ======================================================== */
@@ -3703,11 +2336,16 @@
     radioAtendente: 'bds-radio[label="Atendente"]',
     autocomplete: 'bds-autocomplete#autocompleteAttendant',
     opcao: 'bds-select-option',
-    confirmar: 'bds-button#confirm-transfer-btn'
+    confirmar: 'bds-button#confirm-transfer-btn',
+    // Fila: medido no Blip real em 24/11/2026. "Fila" já vem marcada; as opções têm o nome só no texto.
+    radioFila: 'bds-radio[label="Fila"]',
+    autocompleteFila: 'bds-autocomplete#autocompleteTeam'
   };
-  const transfNomeEl = document.getElementById('ba-transfer-name');
-  const transfStatusEl = document.getElementById('ba-transfer-status');
-  const btnTransfer = document.getElementById('ba-transfer-start');
+  const TRANSF_DESTINOS = {
+    atendente: { radio: TRANSF_SEL.radioAtendente, autocomplete: TRANSF_SEL.autocomplete, rotulo: 'Atendente', campo: 'Selecionar atendente' },
+    fila: { radio: TRANSF_SEL.radioFila, autocomplete: TRANSF_SEL.autocompleteFila, rotulo: 'Fila', campo: 'Selecionar fila' }
+  };
+  let tDestino = TRANSF_DESTINOS.atendente; // destino da transferência em andamento
   let painelFechado = false;
   class TransfInterrompido extends Error {}
   class TransfSuspenso extends Error {}
@@ -3720,10 +2358,6 @@
   }
   function tVisivel(el) {
     return !!el && el.isConnected && isElementoVisivel(el);
-  }
-  function tStatus(texto, tom = '') {
-    transfStatusEl.textContent = texto;
-    transfStatusEl.setAttribute('data-tone', tom);
   }
   // Espera por condição; o tempo pausado não conta. Antes da confirmação, "Parar" interrompe a espera.
   async function tEsperar(fn, timeout, paravel = true) {
@@ -3787,8 +2421,11 @@
     const inner = host?.shadowRoot?.querySelector('button.icon__button');
     return inner ? { host, inner, habilitado: !tDesabilitado(host) && !tDesabilitado(inner) } : null;
   }
-  function tRadioAtendente() {
-    return [...document.querySelectorAll(TRANSF_SEL.radioAtendente)].find(tVisivel) || null;
+  function tRadioDestino() {
+    return [...document.querySelectorAll(tDestino.radio)].find(tVisivel) || null;
+  }
+  function tAlgumRadio() {
+    return [...document.querySelectorAll(`${TRANSF_SEL.radioAtendente}, ${TRANSF_SEL.radioFila}`)].find(tVisivel) || null;
   }
   function tRadioMarcado(host) {
     if (!host) return false;
@@ -3806,7 +2443,7 @@
     return null;
   }
   function tAutocomplete() {
-    return [...document.querySelectorAll(TRANSF_SEL.autocomplete)].find(tVisivel) || null;
+    return [...document.querySelectorAll(tDestino.autocomplete)].find(tVisivel) || null;
   }
   function tInputAuto(ac) {
     return ac?.shadowRoot?.querySelector('input[type="text"]') || null;
@@ -3823,8 +2460,9 @@
   }
   // O Blip mantém todas as opções no DOM e só esconde as que não batem com a pesquisa:
   // conta como visível apenas a opção com área real e com o div[role="button"] interno exibido.
+  // Na lista de filas, as opções que não servem ganham o atributo `invisible` (medido no Blip real).
   function tOpcaoVisivel(op) {
-    if (!tVisivel(op)) return false;
+    if (!tVisivel(op) || op.hasAttribute('invisible')) return false;
     const r = op.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) return false;
     const inner = op.shadowRoot?.querySelector('div[role="button"]');
@@ -3843,7 +2481,7 @@
   }
   // Fecha o modal sem transferir (botão "Cancelar" do modal; se não houver, Escape).
   function tCancelarModal() {
-    if (!tConfirmar() && !tRadioAtendente()) return;
+    if (!tConfirmar() && !tAlgumRadio()) return;
     const cancelar = [...document.querySelectorAll('bds-button, button')]
       .find(b => tVisivel(b) && !p.contains(b) && (b.textContent || '').trim() === 'Cancelar');
     if (cancelar) tClicar(cancelar.shadowRoot?.querySelector('button') || cancelar);
@@ -3853,8 +2491,12 @@
   function tSemAcento(s) {
     return tNorm(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
   }
+  // Nome da opção: atendentes têm aria-label; filas têm o nome só no texto (medido no Blip real).
+  function tRotulo(op) {
+    return (op.getAttribute('aria-label') || op.textContent || '').replace(/\s+/g, ' ').trim();
+  }
   function tRotulos() {
-    return tOpcoes(tAutocomplete()).map(op => op.getAttribute('aria-label') || '');
+    return tOpcoes(tAutocomplete()).map(tRotulo);
   }
   // Digita como um usuário: um caractere por vez com keydown → InputEvent(insertText) → keyup.
   // Atribuir só .value (ou o texto inteiro de uma vez) pode não disparar a pesquisa do Blip.
@@ -3903,8 +2545,8 @@
     let chave = '', desde = Date.now(), ultimo = { iguais: 0, total: 0, filtrou: false };
     const r = await tEsperar(() => {
       const ops = tOpcoes(tAutocomplete());
-      const rot = ops.map(op => op.getAttribute('aria-label') || '');
-      const iguais = ops.filter(op => tNorm(op.getAttribute('aria-label')) === alvo);
+      const rot = ops.map(tRotulo);
+      const iguais = ops.filter(op => tNorm(tRotulo(op)) === alvo);
       const k = rot.join('|');
       ultimo = { iguais: iguais.length, total: ops.length, filtrou: k !== antes, rotulos: rot };
       if (k !== chave) { chave = k; desde = Date.now(); return null; }
@@ -3942,7 +2584,7 @@
       // Sem resultado visível: dica a partir de todas as opções que o Blip carregou (inclusive escondidas).
       const ac = tAutocomplete();
       const todas = [...document.querySelectorAll(TRANSF_SEL.opcao), ...(ac?.shadowRoot ? ac.shadowRoot.querySelectorAll(TRANSF_SEL.opcao) : [])]
-        .map(op => op.getAttribute('aria-label') || '');
+        .map(tRotulo);
       const dica = tParecidos(todas, nome);
       throw new TransfSuspenso(`o Blip não retornou atendentes para "${nome}"` + (dica.length ? ` (nomes parecidos no Blip: ${dica.join(', ')})` : ''));
     }
@@ -3951,7 +2593,22 @@
       (parecidos.length ? `; parecidos: ${parecidos.join(', ')}` : '') + '; nome parcial não é aceito)');
   }
 
-  async function tTransferirTicket(id, nome, alvo) {
+  // Fila: a lista é curta e já vem inteira; escolhe sem digitar, como o BM fez no Blip (abre a lista e clica no nome).
+  async function tEscolherFila(nome, alvo) {
+    const r = await tEsperarOpcao(alvo, '', TRANSF_T.opcoes);
+    if (r.op) return r.op;
+    if (r.ambiguo || r.iguais > 1) throw new TransfSuspenso(`há ${r.ambiguo || r.iguais} filas chamadas "${nome}" no Blip`);
+    if (!r.total) throw new TransfSuspenso('a lista de filas do Blip não abriu (nenhuma fila visível)');
+    const parecidos = tParecidos(r.rotulos || [], nome);
+    throw new TransfSuspenso(`nenhuma fila com o nome exato "${nome}"` +
+      (parecidos.length ? ` (parecidas: ${parecidos.join(', ')})` : '') +
+      `; filas no Blip: ${(r.rotulos || []).join(', ')}`);
+  }
+
+  // destino: 'atendente' (padrão, Transferir antigo) ou 'fila'.
+  async function tTransferirTicket(id, nome, alvo, destino = 'atendente') {
+    tDestino = TRANSF_DESTINOS[destino] || TRANSF_DESTINOS.atendente;
+    const ehFila = tDestino === TRANSF_DESTINOS.fila;
     let confirmado = false;
     const garantirChat = etapa => {
       if (autoIndicioChatAtivo(id) === null) throw new TransfSuspenso(`o atendimento aberto deixou de ser o #${id} (${etapa})`);
@@ -3973,7 +2630,7 @@
       garantirChat('antes de abrir a transferência');
       tClicar(botao.inner);
 
-      const radio = await tEsperar(tRadioAtendente, TRANSF_T.modal);
+      const radio = await tEsperar(tRadioDestino, TRANSF_T.modal);
       if (!radio) throw new TransfSuspenso('o modal de transferência não abriu');
       const ticketModal = tTicketDoModal(radio);
       if (ticketModal && ticketModal !== id) throw new TransfSuspenso(`o modal aberto é do ticket #${ticketModal}, esperado #${id}`);
@@ -3982,46 +2639,53 @@
         await tAntesDeClicar();
         tClicar(radio.shadowRoot?.querySelector('label') || radio.shadowRoot?.querySelector('input[type="radio"]') || radio);
       }
-      if (!(await tEsperar(() => tRadioMarcado(tRadioAtendente()), 4000))) throw new TransfSuspenso('não foi possível selecionar "Atendente"');
+      if (!(await tEsperar(() => tRadioMarcado(tRadioDestino()), 4000))) throw new TransfSuspenso(`não foi possível selecionar "${tDestino.rotulo}"`);
 
       const ac = await tEsperar(() => { const a = tAutocomplete(); return a && tInputAuto(a) ? a : null; }, TRANSF_T.modal);
-      if (!ac) throw new TransfSuspenso('o campo "Selecionar atendente" não apareceu');
+      if (!ac) throw new TransfSuspenso(`o campo "${tDestino.campo}" não apareceu`);
       // O modal do Blip termina de carregar depois de exibir o campo: espera mínima antes de mexer nele
-      // (pausar estende; parar interrompe), depois espera a lista de atendentes estabilizar.
+      // (pausar estende; parar interrompe), depois abre a lista (seta, no máximo 2 cliques) e espera estabilizar.
       await tEsperar(() => null, TRANSF_T.esperaModal);
       await tAntesDeClicar();
       await tEsperarAutocompletePronto();
-      log(`🔎 Ticket #${id}: pesquisando "${nome}" no Blip...`);
-      const opcao = await tPesquisarAtendente(nome, alvo); // pesquisa NO BLIP com o nome do painel
+      let opcao;
+      if (ehFila) {
+        log(`🔎 Ticket #${id}: escolhendo a fila "${nome}" no Blip...`);
+        opcao = await tEscolherFila(nome, alvo);
+      } else {
+        log(`🔎 Ticket #${id}: pesquisando "${nome}" no Blip...`);
+        opcao = await tPesquisarAtendente(nome, alvo); // pesquisa NO BLIP com o nome do painel
+      }
 
-      // Clicar no nome do resultado é o que libera "Transferir ticket" no Blip.
+      // Clicar no nome do resultado (div[role="button"] interno) é o que libera "Transferir ticket" no Blip.
       const alvoClique = () => opcao.isConnected ? (opcao.shadowRoot?.querySelector('div[role="button"]') || opcao) : null;
       await tAntesDeClicar();
       tClicar(alvoClique());
       const liberou = () => { const c = tConfirmar(); return c && c.habilitado; };
       if (!(await tEsperar(liberou, 2000)) && alvoClique()) {
-        log('↻ O botão não liberou; clicando no nome do atendente novamente (seleção, não confirmação)...');
+        log(`↻ O botão não liberou; clicando no nome ${ehFila ? 'da fila' : 'do atendente'} novamente (seleção, não confirmação)...`);
         await tAntesDeClicar();
         dispararCliqueReal(alvoClique());
       }
       if (!(await tEsperar(liberou, TRANSF_T.confirmar))) {
-        throw new TransfSuspenso('o botão "Transferir ticket" não liberou após clicar no atendente');
+        throw new TransfSuspenso(`o botão "Transferir ticket" não liberou após clicar ${ehFila ? 'na fila' : 'no atendente'}`);
       }
       if (tNorm(tInputAuto(tAutocomplete())?.value) !== alvo) {
-        throw new TransfSuspenso('o atendente selecionado no Blip não corresponde ao nome informado');
+        throw new TransfSuspenso(`${ehFila ? 'a fila selecionada' : 'o atendente selecionado'} no Blip não corresponde ao nome informado`);
       }
 
       // Validação final, imediatamente antes da ÚNICA confirmação.
       await tAntesDeClicar();
       garantirChat('antes de confirmar');
-      const ticketModal2 = tTicketDoModal(tRadioAtendente() || tConfirmar()?.host);
+      const ticketModal2 = tTicketDoModal(tRadioDestino() || tConfirmar()?.host);
       if (ticketModal2 && ticketModal2 !== id) throw new TransfSuspenso(`o modal passou a ser do ticket #${ticketModal2}`);
-      if (tNorm(tInputAuto(tAutocomplete())?.value) !== alvo) throw new TransfSuspenso('a seleção de atendente mudou antes da confirmação');
+      if (!tRadioMarcado(tRadioDestino())) throw new TransfSuspenso(`"${tDestino.rotulo}" deixou de estar marcado antes da confirmação`);
+      if (tNorm(tInputAuto(tAutocomplete())?.value) !== alvo) throw new TransfSuspenso(`a seleção ${ehFila ? 'de fila' : 'de atendente'} mudou antes da confirmação`);
       const conf = tConfirmar();
       if (!conf || !conf.habilitado) throw new TransfSuspenso('o botão "Transferir ticket" ficou desabilitado antes da confirmação');
       confirmado = true;
       tClicar(conf.inner);
-      log(`📨 Ticket #${id}: transferência confirmada no Blip; aguardando a saída da lista...`);
+      log(`📨 Ticket #${id}: transferência para ${ehFila ? 'a fila' : 'o atendente'} "${nome}" confirmada no Blip; aguardando a saída da lista...`);
 
       // Após confirmar: só observa (Parar não interrompe; não há nova tentativa).
       const saiu = await tEsperar(() => (autoBotaoMenu(id) ? null : true), TRANSF_T.resultado, false);
@@ -4036,75 +2700,2143 @@
     }
   }
 
-  async function executarTransferenciaAtendente() {
-    if (rodando || autoBloqueiaOutras()) return;
-    const nome = (transfNomeEl.value || '').trim();
-    if (!nome) {
-      tStatus('Informe o nome do atendente.', 'err');
-      log('⚠️ Digite o nome do atendente antes de transferir.');
-      transfNomeEl.focus();
-      return;
+
+/* Validador do fluxo (função pura, sem DOM). Spec §6.
+ *
+ * validarFluxo({ paraQuem, passos }) → { ok:true } | { ok:false, erros:[{ indice, regra, mensagem, correcao?, dica? }] }
+ *   - paraQuem: 'aguardando' (⏳) | 'caindo' (🆕) | 'ambos' (👥)
+ *   - passo: { tipo:'atender' } | { tipo:'enviar', modo:'so'|'finalizar' } | { tipo:'espera', modo:'pausar'|'despausar' }
+ *            | { tipo:'mover' } | { tipo:'transferir' }
+ *   - indice: base 1 (como o usuário vê). O validador devolve TODOS os erros de cada passo.
+ *
+ * Estado simulado: tickets ∈ {'ha','vazio'}; pausados ∈ {'desconhecido','nenhum','alguns','todos'}.
+ * Início em ⏳: há + desconhecido. Em 🆕/👥 (por chat, regra 11): há + nenhum.
+ * Cada passo é avaliado contra o estado e depois APLICADO (mesmo com erro), para os passos
+ * seguintes serem avaliados como o usuário os enxerga.
+ */
+
+function fluxoEstadoInicial(paraQuem) {
+  return paraQuem === 'caindo' || paraQuem === 'ambos'
+    ? { tickets: 'ha', pausados: 'nenhum' }
+    : { tickets: 'ha', pausados: 'desconhecido' };
+}
+
+const FLUXO_MAX_PASSOS = 8;
+const FLUXO_MODOS = ['aguardando', 'caindo', 'ambos'];
+
+// O que a paleta oferece por modo (§4): Atender e Despausar só existem em ⏳.
+// Sem modo escolhido (fluxo novo "+"), a paleta inteira fica desabilitada.
+function disponibilidade(paraQuem) {
+  if (paraQuem === 'aguardando') return { atender: true, despausar: true };
+  if (paraQuem === 'caindo' || paraQuem === 'ambos') return { atender: false, despausar: false };
+  return { atender: false, despausar: false, paleta: false, dica: 'Escolha para quem primeiro' };
+}
+
+function fluxoPassoDisponivel(paraQuem, passo) {
+  if (FLUXO_MODOS.indexOf(paraQuem) === -1) return true; // sem modo: o erro é 'sem-para-quem', não o do passo
+  const d = disponibilidade(paraQuem);
+  if (passo.tipo === 'atender') return d.atender;
+  if (passo.tipo === 'espera' && passo.modo === 'despausar') return d.despausar;
+  return true;
+}
+
+// Loop (§7): efetivo = escolha do usuário E Atender em 1º (só ⏳). `habilitado` diz se o interruptor pode ser mexido.
+function loopEfetivo(fluxo) {
+  const paraQuem = fluxo && fluxo.paraQuem;
+  const passos = (fluxo && fluxo.passos) || [];
+  if (paraQuem === 'caindo' || paraQuem === 'ambos') {
+    return { efetivo: false, habilitado: false, motivo: 'Este modo já vigia até Parar' };
+  }
+  if (paraQuem !== 'aguardando') {
+    return { efetivo: false, habilitado: false, motivo: 'Escolha para quem primeiro' };
+  }
+  const temAtenderEm1o = passos.length > 0 && passos[0].tipo === 'atender';
+  if (!temAtenderEm1o) {
+    return { efetivo: false, habilitado: false, motivo: 'O loop precisa de Atender em 1º' };
+  }
+  return { efetivo: !!fluxo.loopEscolha, habilitado: true, motivo: null };
+}
+
+function fluxoErro(indice, regra, mensagem, extra) {
+  return Object.assign(
+    { indice, regra, mensagem, correcao: { acao: 'remover', indice, texto: 'Remover passo ' + indice } },
+    extra || {}
+  );
+}
+
+function fluxoGlobal(regra, mensagem) {
+  return { indice: null, regra, mensagem };
+}
+
+function fluxoRotulo(passo) {
+  if (passo.tipo === 'atender') return 'Atender';
+  if (passo.tipo === 'enviar') return passo.modo === 'finalizar' ? 'Enviar + Finalizar' : 'Enviar';
+  if (passo.tipo === 'espera') return passo.modo === 'despausar' ? 'Despausar' : 'Pausar';
+  if (passo.tipo === 'mover') return 'Mover';
+  return 'Transferir';
+}
+
+// Validação (spec §6). Cada passo é avaliado contra o estado e depois aplicado, mesmo com erro.
+// Devolve TODOS os erros de cada passo (regra 10); `causa` = índice do passo que provocou o erro.
+function validarFluxo(fluxo) {
+  const passos = (fluxo && fluxo.passos) || [];
+  const paraQuem = fluxo && fluxo.paraQuem;
+  const estado = fluxoEstadoInicial(paraQuem);
+  const porChat = paraQuem === 'caindo' || paraQuem === 'ambos';
+  // rastros do que já aconteceu (índices base 1), só para apontar a causa
+  const rastro = { pausou: null, despausou: null, enviou: null, esvaziou: null };
+  const erros = [];
+
+  // erros globais (sem passo: indice null)
+  if (FLUXO_MODOS.indexOf(paraQuem) === -1) {
+    erros.push(fluxoGlobal('sem-para-quem', 'Escolha para quem o fluxo vale'));
+  }
+  if (passos.length === 0) erros.push(fluxoGlobal('fluxo-vazio', 'Adicione pelo menos um passo'));
+  if (passos.length > FLUXO_MAX_PASSOS) {
+    erros.push(fluxoGlobal('muitos-passos', 'Máximo de ' + FLUXO_MAX_PASSOS + ' passos'));
+  }
+
+  passos.forEach((passo, i) => {
+    const indice = i + 1;
+    const anterior = i > 0 ? passos[i - 1] : null;
+    const enviando = passo.tipo === 'enviar';
+    const despausando = passo.tipo === 'espera' && passo.modo === 'despausar';
+    const pausando = passo.tipo === 'espera' && passo.modo === 'pausar';
+
+    // indisponível no modo (Atender e Despausar não existem em 🆕/👥)
+    if (!fluxoPassoDisponivel(paraQuem, passo)) {
+      const atender = passo.tipo === 'atender';
+      erros.push(
+        fluxoErro(
+          indice,
+          'indisponivel',
+          atender ? 'Atender não existe neste modo' : 'Despausar só existe em Aguardando',
+          atender ? { dica: "Use 'Também puxar a fila' nos Ajustes" } : {}
+        )
+      );
     }
-    const alvo = tNorm(nome);
-    rodando = true;
-    pausado = false;
-    modoAtual = 'transferir';
-    ativarWakeLock();
-    atualizarBotoesEstado(true, `Transferindo → ${nome}`);
-    cntEl.textContent = '0';
-    tStatus(`Transferindo para "${nome}"...`);
-    const assinaturaInicial = autoAssinaturaFiltro(autoResolverContador());
-    const feitos = new Set();
-    let transferidos = 0;
-    log(`🔁 Transferência em massa para "${nome}" iniciada (sempre o primeiro da lista).`);
+
+    // regra 2: depois de Enviar+Finalizar, Transferir ou Mover não sobra cliente (exceto Atender)
+    if (estado.tickets === 'vazio' && passo.tipo !== 'atender') {
+      erros.push(fluxoErro(indice, 2, 'Não sobra cliente na tela', { causa: rastro.esvaziou }));
+    }
+
+    // regra 3: Despausar só é bloqueado quando já se sabe que não há pausados
+    if (despausando && estado.pausados === 'nenhum') {
+      erros.push(fluxoErro(indice, 3, 'Não há cliente em espera para despausar', { causa: rastro.despausou }));
+    }
+
+    // regra 4: mesmo envio duas vezes nos mesmos tickets (qualquer Enviar; Atender no meio libera)
+    if (enviando && rastro.enviou !== null) {
+      erros.push(fluxoErro(indice, 4, 'Não duplique a mensagem para o mesmo cliente', { causa: rastro.enviou }));
+    }
+
+    // regra 1: Enviar com pausados (depois de Pausar, sem Despausar). Com `desconhecido` é permitido.
+    if (enviando && (estado.pausados === 'todos' || estado.pausados === 'alguns')) {
+      // regra 8: só sugere Despausar se não houve envio antes (senão a regra 4 também vale) e se ele existe no modo
+      const sugestao =
+        rastro.enviou === null && !porChat
+          ? { acao: 'inserir', indice, passo: 'despausar', texto: 'Colocar Despausar antes do passo ' + indice }
+          : undefined;
+      erros.push(
+        fluxoErro(indice, 1, 'Cliente em espera não recebe mensagem', {
+          causa: rastro.pausou,
+          ...(sugestao ? { sugestao } : {}),
+        })
+      );
+    }
+
+    // regra 5: Pausar→Pausar ou Despausar→Despausar em passos adjacentes
+    if (
+      anterior &&
+      anterior.tipo === 'espera' &&
+      passo.tipo === 'espera' &&
+      anterior.modo === passo.modo
+    ) {
+      erros.push(fluxoErro(indice, 5, 'Sem efeito: repete o passo anterior', { causa: indice - 1 }));
+    }
+
+    // aplica o efeito (spec §6, coluna "Deixa") e atualiza os rastros
+    if (passo.tipo === 'atender') {
+      estado.tickets = 'ha'; // pausados não muda
+      rastro.enviou = null; // tickets novos: o envio pode se repetir
+      rastro.esvaziou = null;
+    } else if (enviando) {
+      rastro.enviou = indice;
+      if (passo.modo === 'finalizar') {
+        estado.tickets = 'vazio';
+        rastro.esvaziou = indice;
+      }
+    } else if (pausando) {
+      estado.pausados = 'todos';
+      rastro.pausou = indice;
+    } else if (despausando) {
+      estado.pausados = 'nenhum';
+      rastro.pausou = null;
+      rastro.despausou = indice;
+    } else {
+      // mover | transferir
+      estado.tickets = 'vazio';
+      rastro.esvaziou = indice;
+    }
+  });
+
+  return erros.length ? { ok: false, erros } : { ok: true };
+}
+
+// Regra 10: o modal mostra UM erro: o do primeiro passo com erro, escolhendo a regra nesta ordem.
+const FLUXO_ORDEM_REGRAS = ['indisponivel', 2, 3, 4, 1, 5];
+
+function erroDoModal(erros) {
+  if (!erros || !erros.length) return null;
+  const deIndice = erros.filter((e) => e.indice !== null && e.indice !== undefined);
+  if (!deIndice.length) return erros[0]; // só erros globais
+  const primeiro = Math.min.apply(null, deIndice.map((e) => e.indice));
+  const doPasso = deIndice.filter((e) => e.indice === primeiro);
+  doPasso.sort((a, b) => FLUXO_ORDEM_REGRAS.indexOf(a.regra) - FLUXO_ORDEM_REGRAS.indexOf(b.regra));
+  return doPasso[0];
+}
+
+// Texto do modal (layout-M): { titulo, linha, detalhe }. `passos` é o fluxo validado.
+function textoModal(erro, passos) {
+  if (erro.indice === null || erro.indice === undefined) {
+    const titulo = 'Esta ordem não é aceita';
+    if (erro.regra === 'sem-para-quem') {
+      return { titulo, linha: 'Escolha para quem o fluxo vale.', detalhe: 'Aguardando, Que vão cair ou Ambos.' };
+    }
+    if (erro.regra === 'fluxo-vazio') {
+      return { titulo, linha: 'Adicione pelo menos um passo.', detalhe: 'Toque num ícone da paleta para começar.' };
+    }
+    return { titulo, linha: 'O fluxo tem mais de ' + FLUXO_MAX_PASSOS + ' passos.', detalhe: 'Remova algum passo.' };
+  }
+  const rot = (n) => n + ' · ' + fluxoRotulo(passos[n - 1]);
+  const atual = rot(erro.indice);
+  const remover = 'remova o passo ' + erro.indice;
+  const titulo = 'Esta ordem não é aceita';
+  let linha;
+  let detalhe;
+  switch (erro.regra) {
+    case 1:
+      linha = 'O passo ' + atual + ' vem depois de ' + rot(erro.causa) + '.';
+      detalhe = erro.sugestao
+        ? 'Cliente em espera não recebe mensagem. Para enviar, coloque Despausar antes ou ' + remover + '.'
+        : 'Cliente em espera não recebe mensagem. Para enviar, ' + remover + '.';
+      break;
+    case 2:
+      linha = 'O passo ' + atual + ' vem depois de ' + rot(erro.causa) + '.';
+      detalhe = 'Não sobra cliente na tela. Para corrigir, ' + remover + '.';
+      break;
+    case 3:
+      linha = 'O passo ' + atual + ' não tem cliente em espera para despausar.';
+      detalhe = 'Só dá para despausar depois de Pausar. Coloque Pausar antes ou ' + remover + '.';
+      break;
+    case 4:
+      linha = 'O passo ' + atual + ' repete o envio do passo ' + rot(erro.causa) + '.';
+      detalhe = 'Enviar duas vezes para o mesmo cliente não é permitido. Para corrigir, ' + remover + '.';
+      break;
+    case 5:
+      linha = 'O passo ' + atual + ' repete o passo ' + rot(erro.causa) + '.';
+      detalhe = 'Repetir em seguida não tem efeito. Para corrigir, ' + remover + '.';
+      break;
+    default:
+      linha = 'O passo ' + atual + ' não existe neste modo.';
+      detalhe = erro.dica ? erro.dica + '. Ou ' + remover + '.' : remover.charAt(0).toUpperCase() + remover.slice(1) + '.';
+  }
+  return { titulo, linha, detalhe };
+}
+/* Campos obrigatórios dos passos (função pura, sem DOM). Spec §4.
+ * Campo vazio (ou só com espaços) ⇒ campo em vermelho e Iniciar bloqueado. Nada é pulado em silêncio.
+ *
+ * validarCampos(passo) → [{ campo }]   (campo ∈ 'mensagem' | 'tag' | 'pasta' | 'atendente' | 'fila')
+ * podeIniciar(fluxo)   → boolean       (precisa de validar-fluxo.js carregado antes)
+ */
+
+function campoVazio(valor) {
+  return typeof valor !== 'string' || valor.trim() === '';
+}
+
+function validarCampos(passo) {
+  const faltando = [];
+  if (passo.tipo === 'enviar') {
+    if (campoVazio(passo.mensagem)) faltando.push({ campo: 'mensagem' });
+    if (passo.modo === 'finalizar' && campoVazio(passo.tag)) faltando.push({ campo: 'tag' });
+  } else if (passo.tipo === 'mover') {
+    if (campoVazio(passo.pasta)) faltando.push({ campo: 'pasta' });
+  } else if (passo.tipo === 'transferir') {
+    if (passo.para === 'fila') {
+      if (campoVazio(passo.fila)) faltando.push({ campo: 'fila' });
+    } else if (campoVazio(passo.atendente)) faltando.push({ campo: 'atendente' });
+  }
+  return faltando;
+}
+
+// Iniciar só libera com a ordem válida (inclui "Para quem?" e 1 a 8 passos) E todos os campos preenchidos.
+function podeIniciar(fluxo) {
+  if (!validarFluxo(fluxo).ok) return false;
+  return fluxo.passos.every((passo) => validarCampos(passo).length === 0);
+}
+/* Motor do fluxo — ⏳ Aguardando (Tarefa 9), 🆕 Que vão cair e 👥 Ambos (Tarefa 10). Spec §5, §6 (regra 9), §7, §10.
+ *
+ * Puro: nada aqui toca o DOM. Tudo que mexe no Blip chega em deps.acoes (as funções reais no bookmarklet,
+ * falsas nos testes). Precisa de velocidade.js, validar-fluxo.js e validar-campos.js carregados antes.
+ *
+ * executarFluxo(fluxo, deps) → Promise<{ status, ciclos, motivo?, totais }>
+ *   fluxo: { paraQuem, passos, loopEscolha, pausaCiclos (s), velocidade }
+ *   deps.acoes:
+ *     contar() → { fila, naTela, pausados }          (null = desconhecido; só para o log inicial)
+ *     filaAtual() → número | null                    (sentinela)
+ *     atender() → { atendidos }                      (puxa até zerar)
+ *     listarTickets() → [{ id | null, pausado: true | false | null }]
+ *     enviar(id, { mensagem, modo, tag, abrirProximo }) · pausar(id) · despausar(id)
+ *     mover(id, pasta) · transferir(id, nome, para)  → { ok, motivo?, nota?, pulado? }
+ *       para: 'atendente' (padrão, passo sem `para`) ou 'fila'; nome = passo.atendente ou passo.fila
+ *       pulado: ok mas nada foi feito (ex.: ticket em espera não recebe mensagem); não conta; em 🆕/👥 encerra o chat
+ *       semEfeito: o ticket já estava no estado pedido (ex.: já em espera); não conta e o chat segue
+ *     definirVelocidade(v)
+ *     🆕/👥: novosChats() → [id] (chats que caíram desde a última leitura; o observador do Auto por baixo)
+ *            entreChats() (pausa de ritmo AUTO_T.entreTickets) · memoria24h.{ tem(id), gravar(id) }
+ *     Falha de ITEM: devolver { ok:false, motivo } (ou lançar um Error comum). Falha GERAL: lançar ErroGeral(motivo).
+ *   deps.relogio.esperar(ms) · deps.controle.{ parado(), aguardar() → false se parou }
+ *   deps.eventos.{ log(texto), passo(indice, 'aguardando'|'rodando'|'feito'|'falha', detalhe), ciclo(n) }
+ *
+ * Memória por ticket (§5):
+ *   ⏳: só desta execução (zera a cada Iniciar). Um ticket recebe no máximo UM envio na execução inteira; cada
+ *       passo age no máximo uma vez em cada ticket (por isso [P, D, P] funciona e o loop não repete).
+ *   🆕: a de 24 h do Auto; o id é gravado ANTES do primeiro passo (nunca envia duas vezes).
+ *   👥: o lote usa a da execução (ticket que já está nas 24 h é tratado de novo, com aviso); a vigia usa as 24 h e
+ *       ignora os tratados no lote.
+ *   🆕/👥: chats presentes ao ativar não são tratados pela vigia. Só um fluxo roda por vez.
+ */
+
+// Passo Transferir → [nome, para]. Passo antigo (sem `para`) é para atendente.
+function destinoTransferir(passo) {
+  return passo.para === 'fila' ? [passo.fila, 'fila'] : [passo.atendente, 'atendente'];
+}
+
+function ErroGeral(mensagem) {
+  const e = new Error(mensagem);
+  e.geral = true;
+  return e;
+}
+
+const MOTOR_SENTINELA_MS = 1500;
+const MOTOR_VIGIA_MS = 500; // leitura de chats novos quando não há nenhum na fila (não muda com a velocidade)
+let motorOcupado = false;
+
+function motorChavesResumo(passos) {
+  const chaves = [];
+  const add = (k) => { if (chaves.indexOf(k) === -1) chaves.push(k); };
+  for (const p of passos) {
+    if (p.tipo === 'atender') add('atendidos');
+    else if (p.tipo === 'enviar') { add('enviados'); if (p.modo === 'finalizar') add('finalizados'); }
+    else if (p.tipo === 'espera') add(p.modo === 'despausar' ? 'despausados' : 'pausados');
+    else if (p.tipo === 'mover') add('movidos');
+    else if (p.tipo === 'transferir') add('transferidos');
+  }
+  return chaves;
+}
+
+function motorRotuloPasso(passo) {
+  return typeof fluxoRotulo === 'function' ? fluxoRotulo(passo) : passo.tipo;
+}
+
+// Executa um passo em lote nos tickets da tela. Devolve true se o usuário parou no meio.
+async function motorPassoEmLote(passo, indice, ctx) {
+  const { acoes, controle, log, memoria, tc } = ctx;
+  const abrirProximo = ctx.abrirProximo !== false;
+  if (passo.tipo === 'atender') {
+    const r = await acoes.atender();
+    tc.atendidos += (r && r.atendidos) || 0;
+    return false;
+  }
+
+  let tickets = acoes.listarTickets() || [];
+  const comNumero = tickets.filter((t) => t.id);
+  const semNumero = tickets.length - comNumero.length;
+  if (tickets.length && !comNumero.length) {
+    throw ErroGeral('todos os ' + tickets.length + ' cards da tela estão sem número de ticket');
+  }
+  tc.semNumero = Math.max(tc.semNumero, semNumero);
+
+  const feitosNestePasso = memoria.porPasso[indice];
+  const pausando = passo.tipo === 'espera' && passo.modo === 'pausar';
+  const despausando = passo.tipo === 'espera' && passo.modo === 'despausar';
+  const rotulo = (indice + 1) + ' · ' + motorRotuloPasso(passo);
+  const vistos = new Set(); // v10.1: a lista é relida a cada ticket (o Blip carrega mais ao rolar e tira os finalizados)
+  let rolagens = 0;
+
+  for (;;) {
+    if (controle.parado() || !(await controle.aguardar())) return true;
+    const t = tickets.find((x) => x.id && !vistos.has(x.id));
+    if (!t) {
+      if (!acoes.carregarMais || rolagens >= LOTE_ROLAGENS_FIM) break;
+      rolagens++;
+      await acoes.carregarMais();
+      tickets = acoes.listarTickets() || [];
+      continue;
+    }
+    rolagens = 0;
+    vistos.add(t.id);
+    if (feitosNestePasso.has(t.id)) continue;
+    if (ctx.memoria24h && ctx.memoria24h.tem(t.id) && !memoria.avisados.has(t.id)) {
+      memoria.avisados.add(t.id);
+      log('ℹ️ #' + t.id + ' tratado de novo (execução anterior).');
+    }
+    if (passo.tipo === 'enviar') {
+      if (memoria.enviados.has(t.id)) continue; // regra 9: ninguém recebe duas mensagens
+      if (t.pausado === true) {
+        log('⏭️ #' + t.id + ' em espera: não recebe mensagem.');
+        feitosNestePasso.add(t.id);
+        continue;
+      }
+    }
+    if (pausando && t.pausado === true) {
+      log('⏭️ #' + t.id + ' já estava em espera.');
+      feitosNestePasso.add(t.id);
+      continue;
+    }
+    if (despausando && t.pausado === false) continue;
+
+    let r;
     try {
-      while (rodando) {
-        await tAntesDeClicar();
-        const assinatura = autoAssinaturaFiltro(autoResolverContador());
-        if (assinaturaInicial !== null && assinatura !== null && assinatura !== assinaturaInicial) {
-          throw new TransfSuspenso('o filtro/fila da lista mudou durante a execução');
-        }
-        const id = await tPrimeiroTicket();
-        if (!id) {
-          log('🏁 Lista vazia: nenhum ticket restante.');
-          break;
-        }
-        if (feitos.has(id)) throw new TransfSuspenso(`o ticket #${id} voltou ao topo da lista depois de transferido`);
-        log(`➡️ Ticket #${id}: primeiro da lista.`);
-        await tTransferirTicket(id, nome, alvo);
-        feitos.add(id);
-        transferidos++;
-        cntEl.textContent = transferidos;
-        log(`✅ Ticket #${id} transferido para "${nome}" (${transferidos}).`);
-      }
-      tStatus(`Concluído: ${transferidos} ticket(s) transferido(s) para "${nome}".`, 'ok');
+      if (passo.tipo === 'enviar') {
+        r = await acoes.enviar(t.id, {
+          mensagem: passo.mensagem, modo: passo.modo, tag: passo.tag, abrirProximo,
+        });
+      } else if (pausando) r = await acoes.pausar(t.id);
+      else if (despausando) r = await acoes.despausar(t.id);
+      else if (passo.tipo === 'mover') r = await acoes.mover(t.id, passo.pasta);
+      else r = await acoes.transferir(t.id, ...destinoTransferir(passo));
     } catch (err) {
-      if (err instanceof TransfSuspenso) {
-        tStatus(`Suspenso após ${transferidos} transferência(s): ${err.message}.`, 'err');
-        log(`✋ Transferência suspensa: ${err.message}.`);
-      } else if (err instanceof TransfInterrompido) {
-        tStatus(`Interrompido (${err.message}) após ${transferidos} transferência(s).`, 'err');
-        log(`⏹ Transferência interrompida: ${err.message}.`);
-      } else {
-        tStatus(`Erro inesperado: ${err.message}`, 'err');
-        log(`❌ Erro na transferência: ${err.message}`);
+      if (err && err.geral) throw err;
+      r = { ok: false, motivo: (err && err.message) || String(err) };
+    }
+    feitosNestePasso.add(t.id); // não tenta de novo nesta execução (evita repetir uma ação de resultado incerto)
+    motorAvisarItem(ctx, t.id, rotulo, r);
+    tickets = acoes.listarTickets() || [];
+
+    if (!r || !r.ok) {
+      tc.falhas++;
+      log('⚠️ #' + t.id + ': ' + ((r && r.motivo) || 'falhou') + '. Pulado.');
+      continue;
+    }
+    if (r.pulado || r.semEfeito) {
+      log('⏭️ #' + t.id + ': ' + (r.nota || 'pulado') + '.');
+      continue;
+    }
+    if (r.nota) log('ℹ️ #' + t.id + ': ' + r.nota + '.');
+    if (passo.tipo === 'enviar') {
+      memoria.enviados.add(t.id);
+      tc.enviados++;
+      if (passo.modo === 'finalizar') tc.finalizados++;
+    } else if (pausando) tc.pausados++;
+    else if (despausando) tc.despausados++;
+    else if (passo.tipo === 'mover') tc.movidos++;
+    else tc.transferidos++;
+  }
+  return false;
+}
+
+// v10.1: cada ticket tratado vira uma linha do relatório; LOTE_FALHAS_SEGUIDAS falhas seguidas pausam o fluxo.
+function motorAvisarItem(ctx, id, rotulo, r) {
+  const ok = !!(r && r.ok);
+  const resultado = (r && r.resultado) || (!ok ? 'falha' : (r.pulado || r.semEfeito) ? 'pulado' : 'feito');
+  const motivo = (r && (r.motivo || r.nota)) || '';
+  if (ctx.eventos && ctx.eventos.item) ctx.eventos.item({ id, passo: rotulo, resultado, motivo });
+  ctx.seguidas = ok ? 0 : (ctx.seguidas || 0) + 1;
+  if (ctx.seguidas >= LOTE_FALHAS_SEGUIDAS && ctx.controle.pausar) {
+    ctx.controle.pausar(ctx.seguidas);
+    ctx.seguidas = 0;
+  }
+}
+
+function motorContar(tc, passo, ok) {
+  if (!ok) return;
+  if (passo.tipo === 'enviar') {
+    tc.enviados++;
+    if (passo.modo === 'finalizar') tc.finalizados++;
+  } else if (passo.tipo === 'espera') {
+    if (passo.modo === 'despausar') tc.despausados++;
+    else tc.pausados++;
+  } else if (passo.tipo === 'mover') tc.movidos++;
+  else if (passo.tipo === 'transferir') tc.transferidos++;
+}
+
+function motorContadores() {
+  return { falhas: 0, semNumero: 0, atendidos: 0, enviados: 0, finalizados: 0, pausados: 0,
+    despausados: 0, movidos: 0, transferidos: 0 };
+}
+
+function motorResumo(rotulo, tc, chaves) {
+  return rotulo + ': ' + chaves.map((k) => tc[k] + ' ' + k).concat(tc.falhas + ' falhas').join(' · ');
+}
+
+// Só um fluxo por vez (§10). A trava é pega antes de qualquer await.
+async function executarFluxo(fluxo, deps) {
+  if (motorOcupado) return { status: 'recusado', ciclos: 0, motivo: 'Já há um fluxo rodando' };
+  if (!podeIniciar(fluxo)) return { status: 'invalido', ciclos: 0, motivo: 'fluxo inválido ou com campo vazio' };
+  motorOcupado = true;
+  try {
+    const eventos = deps.eventos || {};
+    const log = (t) => { if (eventos.log) eventos.log(t); };
+    if (deps.acoes.contar) {
+      const c = deps.acoes.contar() || {};
+      const v = (x) => (x === null || x === undefined ? '?' : x);
+      log('Fila: ' + v(c.fila) + ' · Na tela: ' + v(c.naTela) + ' · Pausados: ' + v(c.pausados));
+    }
+    if (fluxo.paraQuem === 'aguardando') return await motorAguardando(fluxo, deps, log);
+    return await motorPorChat(fluxo, deps, log);
+  } finally {
+    motorOcupado = false;
+  }
+}
+
+// ⏳ Aguardando: em lote nos tickets da tela, com loop e sentinela.
+async function motorAguardando(fluxo, deps, log) {
+  const acoes = deps.acoes;
+  const relogio = deps.relogio;
+  const controle = deps.controle;
+  const eventos = deps.eventos || {};
+  const marcar = (i, s, d) => { if (eventos.passo) eventos.passo(i, s, d); };
+
+  const passos = fluxo.passos;
+  const loop = loopEfetivo(fluxo).efetivo;
+  const chaves = motorChavesResumo(passos);
+  const memoria = { enviados: new Set(), avisados: new Set(), porPasso: passos.map(() => new Set()) };
+  const totais = { falhas: 0 };
+  chaves.forEach((k) => { totais[k] = 0; });
+  let ciclos = 0;
+  let passoAtual = 0;
+  const fim = (status, motivo) => ({ status, ciclos, motivo, totais });
+
+  try {
+    for (let n = 1; ; n++) {
+      if (eventos.ciclo) eventos.ciclo(n);
+      if (controle.parado()) return fim('parado');
+      passos.forEach((_, i) => marcar(i + 1, 'aguardando'));
+
+      if (loop) {
+        let fila = acoes.filaAtual();
+        if (fila === 0) {
+          log('👁️ Sentinela: fila zerada (0). Vigiando até surgir cliente...');
+          while (fila === 0) {
+            if (controle.parado() || !(await controle.aguardar())) return fim('parado');
+            await relogio.esperar(MOTOR_SENTINELA_MS);
+            fila = acoes.filaAtual();
+          }
+        }
       }
-    } finally {
-      if (!painelFechado) {
-        rodando = false;
-        pausado = false;
-        modoAtual = null;
-        await liberarWakeLock();
-        atualizarBotoesEstado(false);
-        log(`🏁 Transferência encerrada: ${transferidos} ticket(s).`);
+
+      const tc = motorContadores();
+      const ctx = { acoes, controle, log, memoria, tc, abrirProximo: true, eventos };
+      for (let i = 0; i < passos.length; i++) {
+        if (controle.parado() || !(await controle.aguardar())) return fim('parado');
+        const passo = passos[i];
+        passoAtual = i + 1;
+        if (acoes.definirVelocidade) acoes.definirVelocidade(velocidadeDoPasso(passo, fluxo.velocidade));
+        marcar(i + 1, 'rodando');
+        const parou = await motorPassoEmLote(passo, i, ctx);
+        if (parou) return fim('parado');
+        marcar(i + 1, 'feito');
       }
+      passoAtual = 0;
+
+      ciclos = n;
+      log(motorResumo('Ciclo #' + n, tc, chaves));
+      if (tc.semNumero) log('⚠️ ' + tc.semNumero + ' card(s) sem número, pulado(s)');
+      chaves.forEach((k) => { totais[k] += tc[k]; });
+      totais.falhas += tc.falhas;
+
+      if (!loop) return fim('concluido');
+      if (controle.parado() || !(await controle.aguardar())) return fim('parado');
+      await relogio.esperar(pausaEntreCiclos(fluxo.pausaCiclos === undefined ? 1 : fluxo.pausaCiclos));
+    }
+  } catch (err) {
+    return motorFalhaGeral(err, passoAtual, passos, marcar, log, fim);
+  }
+}
+
+function motorFalhaGeral(err, passoAtual, passos, marcar, log, fim) {
+  const motivo = (err && err.message) || String(err);
+  if (passoAtual) {
+    marcar(passoAtual, 'falha', motivo);
+    log('❌ Passo ' + passoAtual + ' · ' + motorRotuloPasso(passos[passoAtual - 1]) + ' falhou: ' + motivo + '. Fluxo parado.');
+  } else {
+    log('❌ ' + motivo + '. Fluxo parado.');
+  }
+  return fim('falha', motivo);
+}
+
+// Aplica todos os passos a UM chat, em ordem; cada passo só começa se o anterior deu certo (o adaptador só
+// devolve ok depois de CONFIRMAR, ex.: envio confirmado antes de pausar). Devolve 'ok' | 'falhou' | 'parado'.
+async function motorPassosNoChat(id, fluxo, ctx) {
+  const { acoes, controle, log, tc, marcar } = ctx;
+  const passos = fluxo.passos;
+  passos.forEach((_, i) => marcar(i + 1, 'aguardando', '#' + id));
+  for (let i = 0; i < passos.length; i++) {
+    if (controle.parado() || !(await controle.aguardar())) return 'parado';
+    const passo = passos[i];
+    ctx.passoAtual = i + 1;
+    if (acoes.definirVelocidade) acoes.definirVelocidade(velocidadeDoPasso(passo, fluxo.velocidade));
+    marcar(i + 1, 'rodando', '#' + id);
+    let r;
+    try {
+      if (passo.tipo === 'enviar') {
+        r = await acoes.enviar(id, { mensagem: passo.mensagem, modo: passo.modo, tag: passo.tag, abrirProximo: false });
+      } else if (passo.tipo === 'espera' && passo.modo === 'pausar') r = await acoes.pausar(id);
+      else if (passo.tipo === 'espera') r = await acoes.despausar(id);
+      else if (passo.tipo === 'mover') r = await acoes.mover(id, passo.pasta);
+      else if (passo.tipo === 'transferir') r = await acoes.transferir(id, ...destinoTransferir(passo));
+      else r = { ok: false, motivo: 'passo indisponível neste modo' };
+    } catch (err) {
+      if (err && err.geral) throw err;
+      r = { ok: false, motivo: (err && err.message) || String(err) };
+    }
+    motorAvisarItem(ctx, id, (i + 1) + ' · ' + motorRotuloPasso(passo), r);
+    if (!r || !r.ok) {
+      tc.falhas++;
+      marcar(i + 1, 'falha', '#' + id);
+      log('⚠️ Chat #' + id + ' · passo ' + (i + 1) + ': ' + ((r && r.motivo) || 'falhou') +
+        '. Os passos seguintes deste chat não rodam.');
+      ctx.passoAtual = 0;
+      return 'falhou';
+    }
+    if (r.pulado) {
+      log('⏭️ Chat #' + id + ' · passo ' + (i + 1) + ': ' + (r.nota || 'pulado') + '. Os passos seguintes deste chat não rodam.');
+      marcar(i + 1, 'feito', '#' + id);
+      ctx.passoAtual = 0;
+      return 'pulado';
+    }
+    if (r.semEfeito) {
+      log('⏭️ Chat #' + id + ': ' + (r.nota || 'sem efeito') + '.');
+      marcar(i + 1, 'feito', '#' + id);
+      continue;
+    }
+    if (r.nota) log('ℹ️ #' + id + ': ' + r.nota + '.');
+    motorContar(tc, passo, true);
+    marcar(i + 1, 'feito', '#' + id);
+  }
+  ctx.passoAtual = 0;
+  return 'ok';
+}
+
+// 🆕 Que vão cair / 👥 Ambos: (👥) uma passada em lote nos que aguardam; depois vigia, um chat por vez, até Parar.
+async function motorPorChat(fluxo, deps, log) {
+  const acoes = deps.acoes;
+  const relogio = deps.relogio;
+  const controle = deps.controle;
+  const eventos = deps.eventos || {};
+  const marcar = (i, s, d) => { if (eventos.passo) eventos.passo(i, s, d); };
+  const passos = fluxo.passos;
+  const chaves = motorChavesResumo(passos);
+  const memoria = { enviados: new Set(), avisados: new Set(), porPasso: passos.map(() => new Set()) };
+  const tc = motorContadores();
+  const ctx = { acoes, controle, log, memoria, tc, marcar, passoAtual: 0, abrirProximo: false, eventos };
+  const fim = (status, motivo) => {
+    log(motorResumo('Resumo', tc, chaves));
+    return { status, ciclos: 0, motivo, totais: tc };
+  };
+
+  const presentes = new Set((acoes.listarTickets() || []).map((t) => t.id).filter(Boolean));
+  const tratados = new Set(); // memória da execução (lote + vigia)
+
+  try {
+    if (fluxo.paraQuem === 'ambos') {
+      const lote = motorContadores();
+      const ctxLote = { acoes, controle, log, memoria, tc: lote, abrirProximo: false, memoria24h: acoes.memoria24h, eventos };
+      for (let i = 0; i < passos.length; i++) {
+        if (controle.parado() || !(await controle.aguardar())) return fim('parado');
+        ctx.passoAtual = i + 1;
+        if (acoes.definirVelocidade) acoes.definirVelocidade(velocidadeDoPasso(passos[i], fluxo.velocidade));
+        marcar(i + 1, 'rodando', 'lote');
+        if (await motorPassoEmLote(passos[i], i, ctxLote)) return fim('parado');
+        marcar(i + 1, 'feito', 'lote');
+      }
+      ctx.passoAtual = 0;
+      memoria.porPasso.forEach((set) => set.forEach((id) => tratados.add(id)));
+      log(motorResumo('Lote', lote, chaves));
+      if (lote.semNumero) log('⚠️ ' + lote.semNumero + ' card(s) sem número, pulado(s)');
+      Object.keys(tc).forEach((k) => { tc[k] += lote[k]; });
+    }
+
+    log('👁️ Vigiando chats que caírem' + (fluxo.puxarFila ? ' (e puxando a fila)' : '') + '...');
+    const fila = [];
+    const naFila = new Set();
+    for (;;) {
+      if (controle.parado() || !(await controle.aguardar())) return fim('parado');
+      if (fluxo.puxarFila) {
+        const f = acoes.filaAtual();
+        if (f !== null && f > 0) {
+          const r = await acoes.atender();
+          tc.atendidos += (r && r.atendidos) || 0;
+        }
+      }
+      for (const id of acoes.novosChats() || []) {
+        if (!id || naFila.has(id) || presentes.has(id) || tratados.has(id)) continue;
+        if (acoes.memoria24h && acoes.memoria24h.tem(id)) continue;
+        naFila.add(id);
+        fila.push(id);
+      }
+      if (!fila.length) {
+        await relogio.esperar(MOTOR_VIGIA_MS);
+        continue;
+      }
+      const id = fila.shift();
+      tratados.add(id);
+      if (acoes.memoria24h) acoes.memoria24h.gravar(id); // antes do 1º passo: nunca envia duas vezes
+      const r = await motorPassosNoChat(id, fluxo, ctx);
+      if (r === 'parado') return fim('parado');
+      if (r === 'ok') log('✅ Chat #' + id + ': ' + passos.length + ' passo(s) feitos.');
+      if (acoes.entreChats) await acoes.entreChats();
+    }
+  } catch (err) {
+    return motorFalhaGeral(err, ctx.passoAtual, passos, marcar, log, fim);
+  }
+}
+  /* ========================================================
+     FLUXO MONTADO PELO USUÁRIO — ADAPTADORES DO MOTOR (Tarefa 11)
+     Liga o motor puro (puro/motor.js) às funções reais do bot, uma ação POR TICKET.
+     Reaproveita as funções antigas; o painel antigo continua funcionando igual.
+     Por enquanto só é acionado pelo gancho de teste (window.__rodBotTeste === true).
+     ======================================================== */
+
+  // Chats novos entregues pelo observador do Auto (modo consumidor) para o motor 🆕/👥.
+  const fluxoNovos = [];
+
+  // Lê pelo menu do ticket se ele está em espera: 'pausado' | 'ativo' | null (não deu para ler).
+  async function fluxoLerEspera(id) {
+    const alvo = autoBotaoMenu(id);
+    if (!alvo) return null;
+    const wrap = alvo.closest('.ticket-menu') || alvo.parentElement;
+    const card = autoCardDoTicket(alvo) || wrap;
+    card?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    card?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    wrap?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    await sleep(120);
+    if (!menuEstaAberto(wrap)) clickUnico(alvo);
+    // Primeiro o menu deste ticket: no Blip real menus de outros tickets podem ter ficado abertos, e a busca geral de
+    // encontrarOpcaoMenu acharia a opção de um deles (um ticket pausado faria este parecer pausado).
+    const doTicket = testId => menuEstaAberto(wrap) &&
+      isAcaoMenuVisivel(wrap?.querySelector(`bds-menu-action[data-testid="${testId}"]`));
+    const estado = await waitFor(() => {
+      if (doTicket(AUTO_SEL.opcaoDespausar)) return 'pausado';
+      if (doTicket(AUTO_SEL.opcaoPausar)) return 'ativo';
+      if (encontrarOpcaoMenu(wrap, AUTO_SEL.opcaoDespausar)) return 'pausado';
+      if (encontrarOpcaoMenu(wrap, AUTO_SEL.opcaoPausar)) return 'ativo';
+      return null;
+    }, AUTO_T.menu, 100).catch(() => null);
+    await fecharMenuTicket(wrap, alvo);
+    return estado;
+  }
+
+  function fluxoListarTickets() {
+    const leitura = autoColetarTickets();
+    const lista = leitura.ids.map(id => ({ id, pausado: null }));
+    for (let i = 0; i < leitura.semIdentidade; i++) lista.push({ id: null, pausado: null });
+    return lista;
+  }
+
+  // Puxa a fila até zerar (mesma lógica do "Atender" antigo, sem mexer no estado global do painel).
+  async function fluxoAtender() {
+    let atendidos = 0;
+    let desabilitadoDesde = 0;
+    for (;;) {
+      if (!(await aguardarPausaSeNecessario())) break;
+      const antes = obterContagemFila();
+      atualizarBadgeFila();
+      if (antes !== null && antes <= 0) break;
+      const btn = obterBotaoAtender();
+      if (!btn || !btn.host) throw ErroGeral('botão "Atender" (#claim-ticket-button) não encontrado');
+      if (btn.disabled) {
+        desabilitadoDesde = desabilitadoDesde || Date.now();
+        if (Date.now() - desabilitadoDesde > 10000) break; // contador ilegível e botão travado: segue o fluxo
+        await sleep(250);
+        continue;
+      }
+      desabilitadoDesde = 0;
+      const alvoClique = btn.inner || btn.host;
+      dispararCliqueReal(alvoClique);
+      if (btn.host !== alvoClique) dispararCliqueReal(btn.host);
+      atendidos++;
+      const resta = obterContagemFila();
+      log(`📥 [Atender #${atendidos}]${resta !== null ? ` Fila: ${resta}` : ''}`);
+      if (resta !== null && resta <= 0) break;
+      await pausaAcao(500);
+    }
+    atualizarBadgeFila();
+    return { atendidos };
+  }
+
+  // Envia (e, em "Enviar + Finalizar", aplica a tag e finaliza) no chat do ticket `id`.
+  // Só devolve ok depois de CONFIRMAR o envio na interface (campo vazio + texto novo na conversa).
+  // Como o Auto antigo, abre o chat direto: o menu ⋮ só é aberto se o campo de mensagem não ficar disponível, para
+  // saber se o ticket está em espera (no Blip real o menu aberto antes de enviar não fechava e travava o envio).
+  // v10.1:
+  // - memória de 24 h por ticket + mensagem, gravada ANTES do Enter: nunca reenvia (nem em outra execução);
+  // - 🧪 Simular: abre o chat e preenche o texto, depois apaga; não envia, não põe tag e não finaliza;
+  // - Enviar + Finalizar: se a tag/finalizar falhar, fecha o que ficou aberto e o ticket vira "enviado, NÃO finalizado";
+  // - o rascunho do chat que o próprio bot abriu antes não bloqueia mais os próximos clientes.
+  let fluxoSimulando = false;
+  let fluxoUltimoAberto = null;
+  async function fluxoEnviar(id, op) {
+    const msg = (op.mensagem || '').trim();
+    const chave = loteChaveEnvio(id, msg);
+    if (loteJaRecebeu(loteLerMemoria(), chave)) {
+      return { ok: true, pulado: true, nota: 'já recebeu esta mensagem antes (memória 24 h)', resultado: 'pulado' };
+    }
+    if (!autoBotaoMenu(id)) return { ok: false, motivo: 'o ticket saiu da lista; nada enviado' };
+    const card = autoCardDoTicket(autoBotaoMenu(id));
+    if (!card) return { ok: false, motivo: 'card do ticket não encontrado; nada enviado' };
+    // Só o chat que você deixou aberto antes de Iniciar é protegido; os que o bot abriu têm o rascunho guardado pelo Blip.
+    if (!fluxoUltimoAberto && autoTemRascunho(msg)) return { ok: false, motivo: 'há texto digitado no chat aberto; nada foi trocado' };
+
+    card.scrollIntoView?.({ block: 'nearest' });
+    if (autoIndicioChatAtivo(id) === null) clickUnico(card);
+    const indicio = await waitFor(() => autoIndicioChatAtivo(id), AUTO_T.chatAtivo, 200).catch(() => null);
+    if (!indicio) return { ok: false, motivo: 'não foi possível confirmar que o chat aberto é deste ticket; nada enviado' };
+    fluxoUltimoAberto = id;
+    const campoLivre = () => {
+      const el = autoCampoTexto();
+      return el && !el.disabled && isElementoVisivel(el) ? el : null;
+    };
+    let input = await waitFor(() => campoLivre() || (autoCampoTexto()?.disabled ? 'bloqueado' : null), AUTO_T.campo, 200)
+      .catch(() => null);
+    if (input === 'bloqueado' || !input) {
+      if ((await fluxoLerEspera(id)) === 'pausado') return { ok: true, pulado: true, nota: 'em espera: não recebe mensagem' };
+      input = input === 'bloqueado' ? await waitFor(campoLivre, AUTO_T.campo, 200).catch(() => null) : null;
+    }
+    if (!input) return { ok: false, motivo: 'campo de mensagem indisponível; nada enviado' };
+    if (autoTemRascunho(msg)) return { ok: true, pulado: true, nota: 'o chat do cliente tem um rascunho; o texto não foi alterado', resultado: 'pulado' };
+
+    if (input.value !== msg) await preencherCampoMensagem(input, msg);
+    if (autoCampoTexto() !== input || autoIndicioChatAtivo(id) === null) {
+      autoLimparSeNosso(input, msg);
+      return { ok: false, motivo: 'o chat aberto mudou durante o preenchimento; nada enviado' };
+    }
+    if (input.value !== msg) return { ok: false, motivo: 'o texto do campo foi alterado manualmente; nada enviado' };
+    if (fluxoSimulando) {
+      autoLimparSeNosso(input, msg);
+      return { ok: true, semEfeito: true, nota: '🧪 simulado: texto preenchido e apagado, nada enviado', resultado: 'simulado' };
+    }
+
+    loteGravarMemoria(chave, 'enviando'); // se tudo cair agora, este ticket nunca recebe de novo
+    const antes = autoContarOcorrencias(msg);
+    dispararEnvioEnter(input);
+    const resultado = await autoConfirmarEnvio(input, msg, antes);
+    if (resultado !== 'confirmado') {
+      autoLimparSeNosso(input, msg);
+      if (resultado === 'nao_enviado') {
+        loteGravarMemoria(chave, 'nao_enviado');
+        return { ok: false, motivo: 'o envio não ocorreu (texto permaneceu no campo)' };
+      }
+      loteGravarMemoria(chave, 'incerto');
+      return { ok: false, motivo: 'envio sem confirmação na interface; confira (não será reenviado)', resultado: 'incerto' };
+    }
+    log(`✉️ #${id}: mensagem enviada e confirmada.`);
+    if (op.modo !== 'finalizar') {
+      loteGravarMemoria(chave, 'enviado');
+      await pausaAcao(CONFIG.delayAcoes);
+      return { ok: true, resultado: 'enviado' };
+    }
+    loteGravarMemoria(chave, 'parcial');
+    try {
+      await passo2_tag(op.tag);
+      await passo3_finalizar();
+      await passo4_confirmarModal();
+    } catch (err) {
+      await loteFecharSobras();
+      return { ok: false, motivo: 'enviado, NÃO finalizado: ' + ((err && err.message) || err), resultado: 'parcial' };
+    }
+    // Deduzido: depois de finalizar, o ticket sai da lista (ou o chat dele deixa de estar aberto).
+    const fechou = await waitFor(() => !autoBotaoMenu(id) || autoIndicioChatAtivo(id) === null, 8000, 250)
+      .then(() => true).catch(() => false);
+    if (!fechou) {
+      await loteFecharSobras();
+      return { ok: false, motivo: 'enviado, NÃO finalizado: cliquei em finalizar, mas o ticket continua aberto', resultado: 'parcial' };
+    }
+    loteGravarMemoria(chave, 'finalizado');
+    log(`🏁 #${id}: finalizado.`);
+    await pausaAcao(CONFIG.delayAcoes);
+    return { ok: true, resultado: 'finalizado' };
+  }
+
+  // Rola a lista para o Blip carregar mais atendimentos (o motor relê a lista depois).
+  async function fluxoCarregarMais() {
+    const cards = document.querySelectorAll(AUTO_SEL.card);
+    const ultimo = cards[cards.length - 1];
+    const sc = ultimo ? encontrarContainerScroll(ultimo) : obterScrollContainerGeral();
+    if (sc) {
+      sc.scrollTop = sc.scrollHeight;
+      sc.dispatchEvent(new Event('scroll', { bubbles: true }));
+    }
+    ultimo?.scrollIntoView?.({ block: 'end' });
+    window.dispatchEvent(new Event('scroll'));
+    log('⏳ Rolando a lista para carregar mais clientes...');
+    await sleep(1500);
+  }
+
+  // Despausar pelo menu do ticket (o caminho inverso de autoTentarPausa).
+  async function fluxoDespausar(id) {
+    const alvo = autoBotaoMenu(id);
+    if (!alvo) return { ok: false, motivo: 'ticket não encontrado na lista' };
+    const wrap = alvo.closest('.ticket-menu') || alvo.parentElement;
+    const card = autoCardDoTicket(alvo) || wrap;
+    card?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    card?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    wrap?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    await sleep(120);
+    clickUnico(alvo);
+    const acao = await waitFor(() => {
+      const t = encontrarOpcaoMenu(wrap, AUTO_SEL.opcaoDespausar);
+      if (t) return { tipo: 'alvo', el: t };
+      const o = encontrarOpcaoMenu(wrap, AUTO_SEL.opcaoPausar);
+      if (o) return { tipo: 'oposto', el: o };
+      return null;
+    }, AUTO_T.menu, 100).catch(() => null);
+    if (!acao) {
+      await fecharMenuTicket(wrap, alvo);
+      return { ok: false, motivo: 'opção de espera não apareceu no menu' };
+    }
+    if (acao.tipo === 'oposto') {
+      await fecharMenuTicket(wrap, alvo);
+      return { ok: true, semEfeito: true, nota: 'não estava em espera' };
+    }
+    const innerBtn = acao.el.shadowRoot?.querySelector('button.menuaction__button, button') || acao.el;
+    await sleep(150);
+    clickUnico(innerBtn);
+    await sleep(550);
+    await fecharAvisosPendentes();
+    const verif = await fluxoLerEspera(id);
+    if (verif === 'ativo') {
+      await pausaAcao(CONFIG.delayAcoes);
+      return { ok: true };
+    }
+    return { ok: false, motivo: 'não foi possível confirmar que saiu da espera' };
+  }
+
+  async function fluxoPausar(id) {
+    const r = await autoTentarPausa(id);
+    if (r.ok && r.nota === 'já estava em espera') return { ok: true, semEfeito: true, nota: r.nota };
+    if (r.ok) await pausaAcao(CONFIG.delayAcoes);
+    return r;
+  }
+
+  async function fluxoMover(id, pasta) {
+    const alvo = autoBotaoMenu(id);
+    if (!alvo) return { ok: false, motivo: 'ticket não encontrado na lista' };
+    const r = await processarMoverTicket(alvo, pasta, normalizarTexto(pasta), `#${id}`, 0);
+    if (r === 'alterado') {
+      await pausaAcao(CONFIG.delayAcoes);
+      return { ok: true };
+    }
+    return { ok: false, motivo: r === 'parado' ? 'interrompido' : `não foi possível mover para "${pasta}"` };
+  }
+
+  async function fluxoTransferir(id, nome, para = 'atendente') {
+    try {
+      await tTransferirTicket(id, nome, tNorm(nome), para === 'fila' ? 'fila' : 'atendente');
+      return { ok: true };
+    } catch (err) {
+      if (err instanceof TransfInterrompido) return { ok: false, motivo: err.message };
+      // TransfSuspenso no Transferir antigo suspende a transferência em massa: aqui é falha geral do passo
+      throw ErroGeral(err.message);
     }
   }
-  bindPanelInput(transfNomeEl, '', () => { if (!rodando) tStatus(''); });
-  btnTransfer.onclick = () => {
-    if (rodando || autoBloqueiaOutras()) return;
-    executarTransferenciaAtendente();
+
+  async function fluxoEntreChats() {
+    await pausaAcao(AUTO_T.entreTickets);
+  }
+
+  const FLUXO_ACOES = {
+    definirVelocidade: v => definirVelocidadeAtual(v),
+    contar: () => {
+      const leitura = autoColetarTickets();
+      return { fila: obterContagemFila(), naTela: leitura.ids.length + leitura.semIdentidade, pausados: null };
+    },
+    filaAtual: () => obterContagemFila(),
+    atender: fluxoAtender,
+    listarTickets: fluxoListarTickets,
+    enviar: fluxoEnviar,
+    pausar: fluxoPausar,
+    despausar: fluxoDespausar,
+    mover: fluxoMover,
+    transferir: fluxoTransferir,
+    novosChats: () => fluxoNovos.splice(0, fluxoNovos.length),
+    carregarMais: fluxoCarregarMais,
+    entreChats: fluxoEntreChats,
+    memoria24h: {
+      tem: id => { const r = autoLerTickets()[id]; return !!(r && (r.fluxo || r.envio)); },
+      gravar: id => autoGravarTicket(id, { contado: true, fluxo: true }),
+    },
   };
+
+  // 🧪 Simular: só o Enviar abre o chat (e apaga o texto); os outros passos não clicam em nada.
+  const simuladoSemClique = { ok: true, semEfeito: true, nota: '🧪 simulado: passo não executado', resultado: 'simulado' };
+  const FLUXO_ACOES_SIMULAR = Object.assign({}, FLUXO_ACOES, {
+    atender: async () => { log('🧪 Simular: Atender não é clicado.'); return { atendidos: 0 }; },
+    pausar: async () => simuladoSemClique,
+    despausar: async () => simuladoSemClique,
+    mover: async () => simuladoSemClique,
+    transferir: async () => simuladoSemClique,
+    memoria24h: { tem: FLUXO_ACOES.memoria24h.tem, gravar: () => {} }, // simulação não marca ninguém como tratado
+  });
+
+  const fluxoEventos = []; // [{ tipo:'inicio'|'ciclo'|'passo'|'fim', ... }] para o Acompanhar e os testes
+  const fluxoOuvintes = []; // a tela Acompanhar se registra aqui (Tarefa 21)
+
+  function fluxoAvisar(ev) {
+    fluxoEventos.push(ev);
+    for (const f of fluxoOuvintes) {
+      try { f(ev); } catch (err) { /* um erro na tela nunca derruba o fluxo */ }
+    }
+  }
+
+  async function fluxoIniciar(fluxo, opcoes = {}) {
+    if (rodando || auto.atual || auto.ativo) return { status: 'recusado', ciclos: 0, motivo: 'Já há um fluxo rodando' };
+    const porChat = fluxo && fluxo.paraQuem !== 'aguardando';
+    rodando = true;
+    pausado = false;
+    modoAtual = 'fluxo';
+    fluxoEventos.length = 0;
+    fluxoNovos.length = 0;
+    fluxoSimulando = !!opcoes.simular;
+    fluxoUltimoAberto = null;
+    loteRegistros = [];
+    loteInicio = new Date().toLocaleString('pt-BR');
+    let feitos = 0;
+    atualizarBotoesEstado(true, fluxoSimulando ? '🧪 Simulando (nada é enviado)' : 'Fluxo em execução');
+    cntEl.textContent = '0';
+    log(`▶ ${fluxoSimulando ? '🧪 SIMULAÇÃO' : 'Fluxo'} "${opcoes.nome || 'Fluxo'}" iniciado (${LOTE_VERSAO}).`);
+    await ativarWakeLock();
+    fluxoAvisar({ tipo: 'inicio', nome: opcoes.nome || 'Fluxo', fluxo });
+    if (porChat) autoAtivar(id => fluxoNovos.push(id));
+    let status = 'falha';
+    try {
+      const r = await executarFluxo(fluxo, {
+        acoes: fluxoSimulando ? FLUXO_ACOES_SIMULAR : FLUXO_ACOES,
+        relogio: { esperar: ms => sleep(ms) },
+        controle: {
+          parado: () => !rodando || painelFechado,
+          aguardar: aguardarPausaSeNecessario,
+          pausar: n => {
+            if (!rodando || pausado) return;
+            pausado = true;
+            btnPause.textContent = '▶ Retomar';
+            log(`✋ ${n} clientes seguidos com problema: fluxo PAUSADO. Confira a tela do Blip e clique em Retomar (ou Parar).`);
+          },
+        },
+        eventos: {
+          log,
+          item: it => {
+            loteRegistrar(it.id, it.passo, it.resultado, it.motivo);
+            if (['finalizado', 'enviado', 'feito', 'simulado'].includes(it.resultado)) cntEl.textContent = String(++feitos);
+          },
+          passo: (indice, st, detalhe) => fluxoAvisar({ tipo: 'passo', indice, status: st, detalhe }),
+          ciclo: n => fluxoAvisar({ tipo: 'ciclo', n }),
+        },
+      });
+      status = r.status;
+      log(`🏁 Fluxo ${r.status}${r.motivo ? `: ${r.motivo}` : ''}.`);
+      return r;
+    } finally {
+      if (porChat) autoDesativar();
+      definirVelocidadeAtual(1);
+      rodando = false;
+      pausado = false;
+      modoAtual = null;
+      fluxoSimulando = false;
+      await liberarWakeLock();
+      atualizarBotoesEstado(false);
+      log(`📊 Relatório: ${loteResumo(loteRegistros).texto}.`);
+      const problemas = loteRegistros.filter(x => ['parcial', 'incerto', 'falha'].includes(x.resultado));
+      for (const x of problemas.slice(0, 30)) log(`   #${x.id} (${x.passo}): ${LOTE_ESTADOS_TEXTO[x.resultado]}${x.motivo ? ` — ${x.motivo.replace(/^enviado, NÃO finalizado: /, '')}` : ''}`);
+      if (problemas.length > 30) log(`   ... e mais ${problemas.length - 30}. Veja tudo em 📄 Relatório.`);
+      logSalvarAgora();
+      fluxoAvisar({ tipo: 'fim', status });
+    }
+  }
+
+  // Gancho de teste (§12.4): só existe quando o teste define window.__rodBotTeste = true ANTES de injetar.
+  if (window.__rodBotTeste === true) {
+    window.__rodBot = {
+      executarFluxo: (fluxo, opcoes) => fluxoIniciar(fluxo, opcoes),
+      eventos: () => fluxoEventos.slice(),
+      parar: () => pararExecucao(),
+    };
+  }
+
+/* Fluxos salvos (função pura; o armazenamento é injetado). Spec §9.
+ *
+ * - Modelos fixos ⭐ Piloto clássico e ⭐ Auto clássico: não são gravados, não se apagam e não se sobrescrevem.
+ *   Editar um modelo vale só em memória: listar() sempre devolve cópias novas do original.
+ * - Até 10 fluxos do usuário (os modelos não contam), gravados em rf_rodbot_fluxos_v1; o último usado em
+ *   rf_rodbot_fluxo_atual_v1. 💾 sempre cria um fluxo NOVO com nome.
+ * - Mensagens dos modelos começam VAZIAS (nunca se preenche MENSAGEM_PADRAO sozinho).
+ *
+ * criarFluxosSalvos(armazenamento, { gerarId?, mensagemAuto? }) → { listar, atual, salvar, apagar, marcarAtual, novoVazio }
+ *   mensagemAuto: a mensagem migrada do Auto antigo (Tarefa 14) para o Enviar do ⭐ Auto clássico; padrão ''.
+ *   item: { id, nome, modelo, fluxo }
+ */
+
+const FLUXOS_CHAVE = 'rf_rodbot_fluxos_v1';
+const FLUXO_ATUAL_CHAVE = 'rf_rodbot_fluxo_atual_v1';
+const FLUXOS_MAX_USUARIO = 10;
+
+function fluxoBase(paraQuem, passos) {
+  return { paraQuem, loopEscolha: true, pausaCiclos: 1, velocidade: 1, puxarFila: false, passos };
+}
+
+function fluxosModelos(mensagemAuto) {
+  return [
+    {
+      id: 'modelo:piloto', nome: '⭐ Piloto clássico', modelo: true,
+      fluxo: fluxoBase('aguardando', [
+        { tipo: 'atender', velocidade: null },
+        { tipo: 'enviar', modo: 'so', mensagem: '', tag: '', velocidade: null },
+        { tipo: 'espera', modo: 'pausar', velocidade: null },
+        { tipo: 'mover', pasta: '', velocidade: null },
+      ]),
+    },
+    {
+      id: 'modelo:auto', nome: '⭐ Auto clássico', modelo: true,
+      fluxo: fluxoBase('caindo', [
+        { tipo: 'enviar', modo: 'so', mensagem: mensagemAuto || '', tag: '', velocidade: null },
+        { tipo: 'espera', modo: 'pausar', velocidade: null },
+      ]),
+    },
+  ];
+}
+
+function fluxoCopia(x) {
+  return JSON.parse(JSON.stringify(x));
+}
+
+function fluxoNomeChave(nome) {
+  return String(nome || '').replace(/⭐/g, '').trim().toLowerCase();
+}
+
+function temAlteracoes(editado, original) {
+  return JSON.stringify(editado) !== JSON.stringify(original);
+}
+
+function criarFluxosSalvos(armazenamento, opcoes) {
+  const mensagemAuto = (opcoes && opcoes.mensagemAuto) || '';
+  const modelos = () => fluxosModelos(mensagemAuto);
+  const gerarId = (opcoes && opcoes.gerarId) || (() => 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+
+  function lerUsuario() {
+    try {
+      const lista = JSON.parse(armazenamento.getItem(FLUXOS_CHAVE) || '[]');
+      if (!Array.isArray(lista)) return [];
+      return lista.filter((x) => x && typeof x.id === 'string' && typeof x.nome === 'string' && x.fluxo && Array.isArray(x.fluxo.passos));
+    } catch (e) {
+      return [];
+    }
+  }
+  function gravarUsuario(lista) {
+    try {
+      armazenamento.setItem(FLUXOS_CHAVE, JSON.stringify(lista));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function listar() {
+    return fluxoCopia(modelos().concat(lerUsuario().map((x) => ({ id: x.id, nome: x.nome, modelo: false, fluxo: x.fluxo }))));
+  }
+
+  function atual() {
+    let id = null;
+    try { id = armazenamento.getItem(FLUXO_ATUAL_CHAVE); } catch (e) { id = null; }
+    const todos = listar();
+    return todos.find((x) => x.id === id) || todos[0];
+  }
+
+  function marcarAtual(id) {
+    try { armazenamento.setItem(FLUXO_ATUAL_CHAVE, id); } catch (e) { /* sem persistência: só não lembra */ }
+  }
+
+  function salvar(nome, fluxo) {
+    const limpo = String(nome || '').trim();
+    if (!limpo) return { ok: false, motivo: 'Dê um nome ao fluxo' };
+    const chave = fluxoNomeChave(limpo);
+    if (modelos().some((x) => fluxoNomeChave(x.nome) === chave)) {
+      return { ok: false, motivo: 'Esse nome é de um modelo ⭐; escolha outro' };
+    }
+    const usuario = lerUsuario();
+    if (usuario.some((x) => fluxoNomeChave(x.nome) === chave)) return { ok: false, motivo: 'Já existe um fluxo com esse nome' };
+    if (usuario.length >= FLUXOS_MAX_USUARIO) return { ok: false, motivo: 'Limite de ' + FLUXOS_MAX_USUARIO + ' fluxos' };
+    const id = gerarId();
+    usuario.push({ id, nome: limpo, fluxo: fluxoCopia(fluxo) });
+    if (!gravarUsuario(usuario)) return { ok: false, motivo: 'Não foi possível salvar neste navegador' };
+    return { ok: true, id };
+  }
+
+  function apagar(id) {
+    if (modelos().some((x) => x.id === id)) return { ok: false, motivo: 'Modelos ⭐ não podem ser apagados' };
+    const usuario = lerUsuario();
+    const resto = usuario.filter((x) => x.id !== id);
+    if (resto.length === usuario.length) return { ok: false, motivo: 'Fluxo não encontrado' };
+    if (!gravarUsuario(resto)) return { ok: false, motivo: 'Não foi possível apagar neste navegador' };
+    return { ok: true };
+  }
+
+  function novoVazio() {
+    return fluxoBase(null, []);
+  }
+
+  return { listar, atual, salvar, apagar, marcarAtual, novoVazio };
+}
+/* Migração na 1ª abertura do painel novo (função pura; armazenamento injetado). Spec §9.
+ *
+ * Fato lido no código antigo: só são gravados tema, aba, pastas recentes, mensagem do Auto, contador e tickets do Auto.
+ * Mensagem e pasta do Piloto/Envio/Pastas NÃO são persistidas, então só a mensagem do Auto migra (para o Enviar do
+ * ⭐ Auto clássico). Roda uma vez (marca rf_rodbot_migracao_v1, que guarda a mensagem migrada) e não apaga nem
+ * altera nenhuma chave antiga (dá para voltar ao HTML anterior). Nunca preenche MENSAGEM_PADRAO sozinho.
+ */
+
+const MIGRACAO_CHAVE = 'rf_rodbot_migracao_v1';
+const MIGRACAO_AUTO_MSG_CHAVE = 'rf_rodbot_auto_msg_v1';
+
+function migracaoLer(armazenamento) {
+  try {
+    const bruto = armazenamento.getItem(MIGRACAO_CHAVE);
+    if (!bruto) return null;
+    const o = JSON.parse(bruto);
+    return o && typeof o === 'object' ? o : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function migrarPrimeiraAbertura(armazenamento) {
+  const feita = migracaoLer(armazenamento);
+  if (feita) return { jaMigrado: true, mensagemAuto: feita.mensagemAuto || '' };
+  let mensagemAuto = '';
+  try {
+    const msg = armazenamento.getItem(MIGRACAO_AUTO_MSG_CHAVE);
+    if (typeof msg === 'string' && msg.trim()) mensagemAuto = msg;
+  } catch (e) {
+    mensagemAuto = '';
+  }
+  try {
+    armazenamento.setItem(MIGRACAO_CHAVE, JSON.stringify({ v: 1, mensagemAuto }));
+  } catch (e) {
+    /* sem armazenamento: roda de novo na próxima abertura, sem prejuízo */
+  }
+  return { jaMigrado: false, mensagemAuto };
+}
+
+function mensagemAutoMigrada(armazenamento) {
+  const feita = migracaoLer(armazenamento);
+  return (feita && typeof feita.mensagemAuto === 'string') ? feita.mensagemAuto : '';
+}
+
+// A aba antiga salva (piloto|pasta|mensagem|fila|auto) ou qualquer outro valor abre em Montar (§3/§9).
+// Acompanhar só aparece sozinho quando um fluxo é iniciado.
+// (a chave antiga rf_rodbot_tab_v1 nem precisa ser lida: o resultado é sempre o mesmo)
+function abaInicial(/* armazenamento */) {
+  return 'montar';
+}
+/* Textos e operações dos passos da tela Montar (puro). Spec §3/§4. */
+
+const PASSO_INFO = {
+  atender: { icone: '📥', nome: 'Atender', titulo: 'Atender fila' },
+  enviar: { icone: '✉️', nome: 'Enviar', titulo: 'Enviar' },
+  espera: { icone: '⏸️', nome: 'Espera', titulo: 'Pausar' },
+  mover: { icone: '📁', nome: 'Mover', titulo: 'Mover' },
+  transferir: { icone: '🔁', nome: 'Transf.', titulo: 'Transferir' },
+};
+const PASSO_ORDEM_PALETA = ['atender', 'enviar', 'espera', 'mover', 'transferir'];
+
+function novoPasso(tipo) {
+  if (tipo === 'enviar') return { tipo, modo: 'so', mensagem: '', tag: '', velocidade: null };
+  if (tipo === 'espera') return { tipo, modo: 'pausar', velocidade: null };
+  if (tipo === 'mover') return { tipo, pasta: '', velocidade: null };
+  if (tipo === 'transferir') return { tipo, atendente: '', velocidade: null };
+  return { tipo: 'atender', velocidade: null };
+}
+
+function tituloPasso(p) {
+  if (p.tipo === 'enviar') return '✉️ Enviar · ' + (p.modo === 'finalizar' ? 'Enviar + Finalizar' : 'Só enviar');
+  if (p.tipo === 'espera') return p.modo === 'despausar' ? '▶️ Despausar' : '⏸️ Pausar';
+  if (p.tipo === 'mover') return '📁 Mover' + ((p.pasta || '').trim() ? ' → ' + p.pasta.trim() : '');
+  if (p.tipo === 'transferir' && p.para === 'fila') return '🔁 Transferir' + ((p.fila || '').trim() ? ' → fila ' + p.fila.trim() : '');
+  if (p.tipo === 'transferir') return '🔁 Transferir' + ((p.atendente || '').trim() ? ' → ' + p.atendente.trim() : '');
+  return '📥 Atender fila';
+}
+
+function passoCurto(texto, max) {
+  const t = String(texto || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const corte = t.slice(0, max);
+  const espaco = corte.lastIndexOf(' ');
+  return (espaco > max * 0.5 ? corte.slice(0, espaco) : corte).replace(/[\s.,;:!?]+$/, '') + '…';
+}
+
+function resumoPasso(p) {
+  if (p.tipo === 'atender') return 'Puxa até zerar · sentinela quando a fila esvaziar';
+  if (p.tipo === 'enviar') {
+    if (!(p.mensagem || '').trim()) return 'Mensagem vazia';
+    const msg = '“' + passoCurto(p.mensagem, 36) + '”';
+    return p.modo === 'finalizar' ? msg + ' · tag ' + ((p.tag || '').trim() || '(vazia)') : msg;
+  }
+  if (p.tipo === 'espera') return p.modo === 'despausar' ? 'Tira os clientes da espera' : 'Coloca os clientes em espera';
+  if (p.tipo === 'mover') return (p.pasta || '').trim() ? 'Move para a pasta' : 'Escolha a pasta';
+  if (p.para === 'fila') return (p.fila || '').trim() ? 'Transfere para a fila' : 'Escolha a fila (nome exato)';
+  return (p.atendente || '').trim() ? 'Transfere para o atendente' : 'Escolha o atendente (nome exato)';
+}
+
+function moverPasso(passos, i, delta) {
+  const lista = passos.slice();
+  const j = i + delta;
+  if (j < 0 || j >= lista.length) return lista;
+  const t = lista[i];
+  lista[i] = lista[j];
+  lista[j] = t;
+  return lista;
+}
+
+function removerPasso(passos, i) {
+  return passos.filter((_, k) => k !== i);
+}
+/* Passo a passo do Acompanhar (puro). Spec §3: os passos do usuário, na ordem dele, com status
+ * Aguardando / Rodando / Feito / Falha. Precisa de passos-tela.js (tituloPasso). */
+
+const STEPPER_TEXTOS = { aguardando: 'Aguardando', rodando: 'Rodando', feito: 'Feito', falha: 'Falha' };
+
+// execucao: { status: { [indice]: 'aguardando'|'rodando'|'feito'|'falha' }, detalhe: { [indice]: texto } } (índice base 1)
+function montarStepper(passos, execucao) {
+  const st = (execucao && execucao.status) || {};
+  const det = (execucao && execucao.detalhe) || {};
+  return passos.map((p, i) => {
+    const indice = i + 1;
+    const status = STEPPER_TEXTOS[st[indice]] ? st[indice] : 'aguardando';
+    const statusTexto = STEPPER_TEXTOS[status];
+    const detalhe = det[indice] || '';
+    return { indice, rotulo: tituloPasso(p), status, statusTexto, detalhe,
+      texto: detalhe && status !== 'aguardando' ? statusTexto + ' · ' + detalhe : statusTexto };
+  });
+}
+
+function novaExecucao({ nome, paraQuem, passos }) {
+  return { nome, paraQuem, passos: JSON.parse(JSON.stringify(passos)), ciclo: 0, status: {}, detalhe: {}, fim: null };
+}
+
+// Eventos do motor: { tipo:'ciclo', n } | { tipo:'passo', indice, status, detalhe } | { tipo:'fim', status }
+function aplicarEventoStepper(ex, ev) {
+  const novo = { ...ex, status: { ...ex.status }, detalhe: { ...ex.detalhe } };
+  if (ev.tipo === 'ciclo') novo.ciclo = ev.n;
+  else if (ev.tipo === 'passo') {
+    novo.status[ev.indice] = ev.status;
+    if (ev.detalhe !== undefined) novo.detalhe[ev.indice] = ev.detalhe;
+    else if (ev.status === 'aguardando') delete novo.detalhe[ev.indice];
+  } else if (ev.tipo === 'fim') novo.fim = ev.status;
+  return novo;
+}
+
+function rotuloExecucao(ex) {
+  if (!ex) return 'Parado';
+  if (ex.fim) return { concluido: 'Concluído', falha: 'Falha', parado: 'Parado' }[ex.fim] || 'Parado';
+  if (ex.paraQuem === 'aguardando') return ex.ciclo ? 'Ciclo #' + ex.ciclo : 'Iniciando';
+  return 'Vigiando';
+}
+  /* ========================================================
+     TELA NOVA — MONTAR | ACOMPANHAR (Tarefas 15–21)
+     Layout escolhido pelo BM: opção 2 · compacta (docs/plano/layouts/opcao-montar-2.png); Acompanhar como o layout D.
+     É a única tela do painel (o painel antigo de 5 abas foi removido na Tarefa 22).
+     ======================================================== */
+
+  styleEl.textContent += `
+    #ba-win[data-ui="nova"][data-rb-aba="montar"] #ba-run-bar,
+    #ba-win[data-ui="nova"][data-rb-aba="montar"] .ba-telemetry,
+    #ba-win[data-ui="nova"][data-rb-aba="montar"] #ba-log { display: none !important; }
+    .rb-abas { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--rb-elevated); border: 1px solid var(--rb-border); }
+    .rb-aba { flex: 1; padding: 8px 4px; border-radius: 9px; border: 1px solid transparent; background: transparent;
+      color: var(--rb-muted); font-weight: 600; font-size: 13px; line-height: 1.2; font-family: inherit; cursor: pointer; }
+    .rb-aba:hover { color: var(--rb-text); }
+    .rb-aba.ativa { background: var(--rb-accent-dim); color: var(--rb-accent); border-color: var(--rb-accent-border); }
+    .rb-vista { display: none; flex-direction: column; gap: 10px; }
+    .rb-vista.ativa { display: flex; }
+    .rb-linha { display: flex; align-items: center; gap: 8px; }
+    .rb-sub { color: var(--rb-muted); font-size: 12px; }
+    .rb-sel { flex: 1; min-width: 0; padding: 7px 9px; border-radius: 9px; background: var(--rb-elevated);
+      color: var(--rb-text); border: 1px solid var(--rb-border); font-size: 13px; font-family: inherit; }
+    .rb-ib { width: 32px; height: 32px; border-radius: 9px; background: var(--rb-elevated); color: var(--rb-text);
+      border: 1px solid var(--rb-border); cursor: pointer; font-size: 14px; }
+    .rb-pq { padding: 4px 9px; border-radius: 999px; border: 1px solid var(--rb-border); background: transparent;
+      color: var(--rb-muted); font-weight: 600; font-size: 12px; font-family: inherit; cursor: pointer; }
+    .rb-pq.on { color: var(--rb-accent); border-color: var(--rb-accent-border); background: var(--rb-accent-dim); }
+    @keyframes rb-pisca { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px var(--rb-accent-glow); } }
+    .rb-pq-linha.rb-pisca .rb-pq { animation: rb-pisca 0.4s ease-in-out 3; border-color: var(--rb-accent-border); }
+    .rb-pal { display: flex; gap: 6px; }
+    .rb-pal button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 4px;
+      border-radius: 10px; border: 1px solid var(--rb-border); background: var(--rb-card); color: var(--rb-muted);
+      font-size: 12px; font-family: inherit; cursor: pointer; }
+    .rb-pal button:hover { color: var(--rb-text); border-color: var(--rb-border-strong); }
+    .rb-pal.rb-destaque button { border-color: var(--rb-accent-border); color: var(--rb-text); box-shadow: 0 0 0 2px var(--rb-accent-dim); }
+    .rb-pal.rb-off button { opacity: 0.4; }
+    .rb-dica { color: var(--rb-muted); font-size: 11.5px; text-align: center; }
+    .rb-dica:empty { display: none; }
+    .rb-passos { display: flex; flex-direction: column; gap: 8px; }
+    .rb-passo { border-radius: 11px; border: 1px solid var(--rb-border); background: var(--rb-card); padding: 9px 10px; }
+    .rb-passo.aberto { border-color: var(--rb-accent-border); }
+    .rb-passo.erro { border-color: #f26060; background: rgba(242, 96, 96, 0.10); }
+    .rb-passo-topo { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+    .rb-num { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center;
+      background: var(--rb-elevated); border: 1px solid var(--rb-border); font-size: 12px; font-weight: 700; }
+    .rb-passo-txt { flex: 1; min-width: 0; }
+    .rb-passo-tit { font-weight: 700; font-size: 13.5px; }
+    .rb-passo-res { color: var(--rb-muted); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rb-passo-erro { color: #f6a3a3; font-size: 12px; margin-top: 3px; }
+    .rb-passo-erro:empty { display: none; }
+    .rb-ctl { display: flex; gap: 4px; }
+    .rb-ctl button { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--rb-border);
+      background: var(--rb-elevated); color: var(--rb-muted); cursor: pointer; font-size: 11px; padding: 0; }
+    .rb-ctl button:disabled { opacity: 0.35; cursor: default; }
+    .rb-campos { display: none; flex-direction: column; gap: 7px; margin-top: 8px; padding-left: 34px; }
+    .rb-passo.aberto .rb-campos { display: flex; }
+    .rb-seg { display: flex; gap: 3px; padding: 3px; border-radius: 10px; background: var(--rb-elevated); border: 1px solid var(--rb-border); }
+    .rb-seg button { flex: 1; padding: 7px 4px; border-radius: 8px; border: 1px solid transparent; background: transparent;
+      color: var(--rb-muted); font-weight: 600; font-size: 12.5px; font-family: inherit; cursor: pointer; }
+    .rb-seg button.on { background: var(--rb-accent-dim); color: var(--rb-accent); border-color: var(--rb-accent-border); }
+    .rb-in { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 9px; background: var(--rb-elevated);
+      color: var(--rb-text); border: 1px solid var(--rb-border); font-size: 13px; font-family: inherit; resize: vertical; }
+    .rb-in.rb-vazio { border-color: #f26060; background: rgba(242, 96, 96, 0.10); }
+    .rb-in-vel { width: 82px; flex: none; }
+    .rb-sp { flex: 1; }
+    .rb-aviso { color: #fbbf24; font-size: 11.5px; }
+    .rb-aviso:empty { display: none; }
+    .rb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .rb-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--rb-border); background: var(--rb-elevated);
+      color: var(--rb-text); font-size: 12.5px; font-family: inherit; cursor: pointer; }
+    .rb-selo { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #2b2210;
+      color: #f5b041; border: 1px solid #5d4517; }
+    .rb-selo:empty { display: none; }
+    .rb-modal-ancora { position: sticky; top: 0; height: 0; z-index: 60; overflow: visible; }
+    .rb-modal-fundo { position: absolute; top: 0; left: 0; right: 0; display: grid; place-items: center; padding: 18px;
+      background: rgba(0, 0, 0, 0.62); border-radius: inherit; }
+    .rb-modal { width: 100%; box-sizing: border-box; padding: 16px; border-radius: 14px; background: #151b20;
+      border: 1px solid #6b2b2b; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8); color: var(--rb-text); }
+    .rb-modal h3 { margin: 0 0 8px; color: #ff8a8a; font-size: 16px; font-weight: 700; }
+    .rb-modal-linha { font-size: 14px; margin: 0 0 8px; }
+    .rb-modal-detalhe { color: var(--rb-muted); font-size: 13px; margin: 0 0 14px; line-height: 1.45; }
+    .rb-modal-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    .rb-modal-btns button { flex: 1; min-width: 120px; padding: 11px 8px; border-radius: 11px; font-weight: 700; font-size: 14px; cursor: pointer;
+      border: 1px solid var(--rb-border-strong); background: var(--rb-elevated); color: var(--rb-text); font-family: inherit; }
+    .rb-modal-btns button.rb-primario { background: var(--rb-accent); color: var(--rb-on-accent); border-color: transparent; }
+    .rb-ajustes { border-radius: 12px; border: 1px solid var(--rb-border); background: var(--rb-card); }
+    .rb-ajustes-topo { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: transparent;
+      border: 0; color: var(--rb-text); cursor: pointer; text-align: left; font-family: inherit; }
+    .rb-ajustes-tit { font-weight: 700; font-size: 13px; }
+    #rb-ajustes-res { flex: 1; min-width: 0; text-align: right; }
+    .rb-ajustes-corpo { display: flex; flex-direction: column; gap: 10px; padding: 0 12px 12px; }
+    .rb-ajustes-corpo[hidden], .rb-bloco[hidden] { display: none; }
+    .rb-bloco { display: flex; flex-direction: column; gap: 4px; }
+    .rb-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+    .rb-toggle input:disabled + * , .rb-toggle:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
+    .rb-modal-neutro { border-color: var(--rb-border-strong); }
+    .rb-modal-neutro h3 { color: var(--rb-text); }
+    .rb-modal-campo { margin: 0 0 8px; }
+    .rb-modal-campo[hidden] { display: none; }
+    .rb-modal-erro { color: #f6a3a3; font-size: 12.5px; margin: 0 0 10px; min-height: 0; }
+    .rb-modal-erro:empty { display: none; }
+    #rb-alterado[hidden], #rb-apagar[hidden] { display: none; }
+    .rb-acomp-topo { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px;
+      border: 1px solid var(--rb-border); background: var(--rb-card); }
+    .rb-acomp-nome { flex: 1; font-weight: 700; font-size: 14px; }
+    .rb-pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--rb-accent-dim);
+      color: var(--rb-accent); border: 1px solid var(--rb-accent-border); }
+    .rb-pill[data-estado="parado"], .rb-pill[data-estado="concluido"] { background: var(--rb-elevated); color: var(--rb-muted); border-color: var(--rb-border); }
+    .rb-pill[data-estado="falha"] { background: rgba(242, 96, 96, 0.12); color: #f6a3a3; border-color: rgba(242, 96, 96, 0.5); }
+    .rb-stepper { display: flex; flex-direction: column; gap: 8px; }
+    .rb-etapa { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px;
+      border: 1px solid var(--rb-border); background: var(--rb-card); }
+    .rb-etapa-marca { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center;
+      background: var(--rb-elevated); border: 1px solid var(--rb-border); font-size: 12px; font-weight: 800; }
+    .rb-etapa-txt { flex: 1; min-width: 0; }
+    .rb-etapa-tit { font-weight: 700; font-size: 13.5px; }
+    .rb-etapa-sub { font-size: 12px; color: var(--rb-muted); margin-top: 2px; }
+    .rb-etapa[data-status="aguardando"] { opacity: 0.7; }
+    .rb-etapa[data-status="rodando"] { border-color: var(--rb-accent); box-shadow: 0 0 0 2px var(--rb-accent-dim); }
+    .rb-etapa[data-status="rodando"] .rb-etapa-sub { color: var(--rb-accent); }
+    .rb-etapa[data-status="feito"] .rb-etapa-marca { background: var(--rb-accent); color: var(--rb-on-accent); border-color: transparent; }
+    .rb-etapa[data-status="falha"] { border-color: #f26060; background: rgba(242, 96, 96, 0.10); }
+    .rb-etapa[data-status="falha"] .rb-etapa-marca { background: #f26060; color: #fff; border-color: transparent; }
+    .rb-etapa[data-status="falha"] .rb-etapa-sub { color: #f6a3a3; }
+    #rb-acomp-auto[hidden] { display: none; }
+    .rb-cta.rb-bloqueado { opacity: 0.45; }
+    .rb-cta { padding: 12px; border-radius: 12px; border: 0; background: var(--rb-accent); color: var(--rb-on-accent);
+      font-weight: 800; font-size: 15px; font-family: inherit; cursor: pointer; }
+    .rb-cta:disabled { opacity: 0.45; cursor: not-allowed; }
+  `;
+
+  const telaArmazenamento = { getItem: k => localStorage.getItem(k), setItem: (k, v) => localStorage.setItem(k, v) };
+  const tela = { fluxos: null, item: null, fluxo: null, aberto: null, exec: null };
+  const rbAbas = {};
+  const rbVistas = {};
+
+  function telaAplicarAba(aba) {
+    win.setAttribute('data-rb-aba', aba);
+    if (aba === 'acompanhar') telaRenderAcompanhar();
+    Object.keys(rbAbas).forEach(k => {
+      rbAbas[k].classList.toggle('ativa', k === aba);
+      rbAbas[k].setAttribute('aria-selected', String(k === aba));
+      rbVistas[k].classList.toggle('ativa', k === aba);
+    });
+  }
+
+  function telaMontarCasca() {
+    const corpo = win.querySelector('.ba-body');
+    const antesDe = document.getElementById('ba-run-bar');
+    const abas = document.createElement('div');
+    abas.className = 'rb-abas';
+    abas.id = 'rb-abas';
+    abas.setAttribute('role', 'tablist');
+    abas.innerHTML = `
+      <button type="button" class="rb-aba" id="rb-aba-montar" role="tab" data-rb-aba="montar">🧩 Montar</button>
+      <button type="button" class="rb-aba" id="rb-aba-acompanhar" role="tab" data-rb-aba="acompanhar">📊 Acompanhar</button>`;
+    const montar = document.createElement('div');
+    montar.className = 'rb-vista';
+    montar.id = 'rb-montar';
+    const acompanhar = document.createElement('div');
+    acompanhar.className = 'rb-vista';
+    acompanhar.id = 'rb-acompanhar';
+    corpo.insertBefore(abas, antesDe);
+    corpo.insertBefore(montar, antesDe);
+    corpo.insertBefore(acompanhar, antesDe);
+    rbAbas.montar = abas.querySelector('#rb-aba-montar');
+    rbAbas.acompanhar = abas.querySelector('#rb-aba-acompanhar');
+    rbVistas.montar = montar;
+    rbVistas.acompanhar = acompanhar;
+    abas.addEventListener('click', e => {
+      const b = e.target.closest('[data-rb-aba]');
+      if (b) telaAplicarAba(b.dataset.rbAba);
+    });
+    win.setAttribute('data-ui', 'nova');
+    migrarPrimeiraAbertura(telaArmazenamento);
+    tela.fluxos = criarFluxosSalvos(telaArmazenamento, { mensagemAuto: mensagemAutoMigrada(telaArmazenamento) });
+    telaCarregar(tela.fluxos.atual());
+    telaMontarMontar();
+    telaMontarAcompanhar();
+    telaAplicarAba(abaInicial());
+  }
+
+  // ───────── Iniciar: roda uma CÓPIA do fluxo (editar o Montar durante a execução não muda o que está rodando)
+  async function telaIniciar() {
+    if (rodando || !podeIniciar(tela.fluxo)) return;
+    const copia = JSON.parse(JSON.stringify(tela.fluxo));
+    const simular = !!rbVistas.montar.querySelector('#rb-simular')?.checked;
+    if (simular) {
+      copia.loopEscolha = false; // a simulação passa uma vez pela lista
+    } else if (copia.passos.some(x => x.tipo !== 'atender')) {
+      const naTela = autoColetarTickets().ids.length;
+      const ok = confirm(`⚠️ ENVIO REAL — fluxo "${tela.item.nome}"\n\n` +
+        `Os passos vão rodar de verdade nos clientes (${naTela} carregados na lista agora; o bot rola a lista para buscar o resto).\n\n` +
+        `Dica: rode antes com "🧪 Simular" marcado.\n\nIniciar agora?`);
+      if (!ok) { log('⚠️ Iniciar cancelado.'); return; }
+    }
+    telaAplicarAba('acompanhar'); // §3: ao clicar em Iniciar o painel pula sozinho para Acompanhar
+    const r = await fluxoIniciar(copia, { nome: tela.item.nome, simular });
+    if (r.status === 'recusado' || r.status === 'invalido') log(`⚠️ Não iniciou: ${r.motivo}.`);
+  }
+
+  // ───────── Acompanhar (layout D): nome + ciclo, passo a passo do usuário, contadores do Auto (🆕/👥), Pausar/Parar e log
+  function telaMontarAcompanhar() {
+    rbVistas.acompanhar.innerHTML = `
+      <div class="rb-acomp-topo"><span id="rb-acomp-nome" class="rb-acomp-nome"></span><span id="rb-acomp-ciclo" class="rb-pill"></span></div>
+      <div id="rb-stepper" class="rb-stepper"></div>
+      <div id="rb-acomp-auto" hidden></div>`;
+    // os contadores do Auto são os mesmos elementos de antes (autoRender continua atualizando por id)
+    const cartaoAuto = document.getElementById('ba-auto-count')?.closest('.ba-card');
+    if (cartaoAuto) rbVistas.acompanhar.querySelector('#rb-acomp-auto').appendChild(cartaoAuto);
+    fluxoOuvintes.push(telaAoEventoFluxo);
+    telaRenderAcompanhar();
+  }
+
+  function telaAoEventoFluxo(ev) {
+    if (ev.tipo === 'inicio') {
+      tela.exec = novaExecucao({ nome: ev.nome, paraQuem: ev.fluxo.paraQuem, passos: ev.fluxo.passos });
+    } else if (tela.exec) {
+      tela.exec = aplicarEventoStepper(tela.exec, ev);
+    }
+    telaRenderAcompanhar();
+    if (ev.tipo === 'inicio' || ev.tipo === 'fim') telaAtualizarMontar(); // Iniciar bloqueia enquanto roda
+  }
+
+  function telaRenderAcompanhar() {
+    const v = rbVistas.acompanhar;
+    if (!v || !tela.fluxo || !v.querySelector('#rb-acomp-nome')) return; // ainda não montado
+    const base = tela.exec || { nome: tela.item.nome, paraQuem: tela.fluxo.paraQuem, passos: tela.fluxo.passos };
+    v.querySelector('#rb-acomp-nome').textContent = base.nome;
+    const pill = v.querySelector('#rb-acomp-ciclo');
+    pill.textContent = rotuloExecucao(tela.exec);
+    pill.dataset.estado = tela.exec ? (tela.exec.fim || 'rodando') : 'parado';
+    const lista = v.querySelector('#rb-stepper');
+    lista.innerHTML = '';
+    for (const item of montarStepper(base.passos, tela.exec)) {
+      const el = document.createElement('div');
+      el.className = 'rb-etapa';
+      el.dataset.status = item.status;
+      el.innerHTML = '<span class="rb-etapa-marca"></span><div class="rb-etapa-txt"><div class="rb-etapa-tit"></div><div class="rb-etapa-sub"></div></div>';
+      el.querySelector('.rb-etapa-marca').textContent = item.status === 'feito' ? '✓' : item.status === 'falha' ? '✕' : String(item.indice);
+      el.querySelector('.rb-etapa-tit').textContent = item.rotulo;
+      el.querySelector('.rb-etapa-sub').textContent = item.texto;
+      lista.appendChild(el);
+    }
+    v.querySelector('#rb-acomp-auto').hidden = !(base.paraQuem === 'caindo' || base.paraQuem === 'ambos');
+  }
+
+  function telaCarregar(item) {
+    tela.item = item;
+    tela.fluxo = JSON.parse(JSON.stringify(item.fluxo));
+    tela.original = JSON.parse(JSON.stringify(item.fluxo)); // base para "alterações não salvas"
+    tela.aberto = null;
+  }
+
+  function telaSujo() {
+    return !!tela.original && temAlteracoes(tela.fluxo, tela.original);
+  }
+
+  // ───────── Montar (opção 2 · compacta)
+  function telaMontarMontar() {
+    rbVistas.montar.innerHTML = `
+      <div class="rb-linha">
+        <select id="rb-fluxo-sel" class="rb-sel" title="Fluxo salvo"></select>
+        <button type="button" id="rb-salvar" class="rb-ib" title="Salvar como novo fluxo">💾</button>
+        <button type="button" id="rb-apagar" class="rb-ib" title="Apagar este fluxo" hidden>🗑</button>
+        <button type="button" id="rb-novo" class="rb-ib" title="Novo fluxo vazio">＋</button>
+      </div>
+      <div id="rb-alterado" class="rb-aviso" hidden>● Alterações não salvas (💾 salva como um fluxo novo)</div>
+      <div class="rb-linha rb-pq-linha" id="rb-pq">
+        <span class="rb-sub">Para quem?</span>
+        <button type="button" class="rb-pq" data-pq="aguardando">⏳ Aguardando</button>
+        <button type="button" class="rb-pq" data-pq="caindo">🆕 Que vão cair</button>
+        <button type="button" class="rb-pq" data-pq="ambos">👥 Ambos</button>
+      </div>
+      <div class="rb-pal" id="rb-paleta">
+        ${PASSO_ORDEM_PALETA.map(t => `<button type="button" data-tipo="${t}" title="Adicionar ${PASSO_INFO[t].titulo}"><span>${PASSO_INFO[t].icone}</span>${PASSO_INFO[t].nome}</button>`).join('')}
+      </div>
+      <div class="rb-dica" id="rb-pal-dica"></div>
+      <div class="rb-passos" id="rb-passos"></div>
+      <div class="rb-ajustes" id="rb-ajustes">
+        <button type="button" id="rb-ajustes-topo" class="rb-ajustes-topo" aria-expanded="false">
+          <span class="rb-ajustes-tit">⚙️ Ajustes</span><span id="rb-ajustes-res" class="rb-sub"></span><span class="rb-sub rb-seta">▾</span>
+        </button>
+        <div class="rb-ajustes-corpo" id="rb-ajustes-corpo" hidden>
+          <div class="rb-linha"><label class="rb-sub" for="rb-vel">Velocidade</label><span class="rb-sp"></span>
+            <input id="rb-vel" class="rb-in rb-in-vel" inputmode="decimal"><span id="rb-vel-aviso" class="rb-aviso"></span></div>
+          <div class="rb-sub">De 0.5 a 2.0 · maior = mais rápido · vale para as pausas entre ações</div>
+          <div id="rb-loop-bloco" class="rb-bloco">
+            <label class="rb-toggle"><input type="checkbox" id="rb-loop"> Repetir em loop (sentinela)</label>
+            <div id="rb-loop-motivo" class="rb-sub"></div>
+          </div>
+          <div id="rb-ciclo-bloco" class="rb-bloco">
+            <div class="rb-linha"><label class="rb-sub" for="rb-ciclo">Pausa entre ciclos (s)</label><span class="rb-sp"></span>
+              <input id="rb-ciclo" class="rb-in rb-in-vel" inputmode="decimal"><span id="rb-ciclo-aviso" class="rb-aviso"></span></div>
+            <div class="rb-sub">De 0 a 60 s · não muda com a velocidade</div>
+          </div>
+          <div id="rb-puxar-bloco" class="rb-bloco" hidden>
+            <label class="rb-toggle"><input type="checkbox" id="rb-puxar"> Também puxar a fila (Atender)</label>
+            <div class="rb-sub">O bot clica em Atender e quem for puxado recebe o fluxo uma vez</div>
+          </div>
+        </div>
+      </div>
+      <label class="rb-toggle" title="Abre cada chat e preenche o texto, mas não envia, não finaliza, não pausa, não move e não transfere">
+        <input type="checkbox" id="rb-simular" checked> 🧪 Simular (não envia nada; desmarque para o envio real)</label>
+      <button type="button" id="rb-iniciar" class="rb-cta">⚡ Iniciar fluxo</button>
+      <div class="rb-dica" id="rb-iniciar-dica"></div>`;
+    const v = rbVistas.montar;
+    v.querySelector('#rb-fluxo-sel').addEventListener('change', e => {
+      const item = tela.fluxos.listar().find(x => x.id === e.target.value);
+      if (!item) return;
+      if (telaSujo()) e.target.value = tela.item.id || ''; // enquanto a pergunta está aberta, o seletor mostra o fluxo atual
+      telaAntesDeTrocar(() => { telaCarregar(item); tela.fluxos.marcarAtual(item.id); telaRenderMontar(); });
+    });
+    v.querySelector('#rb-novo').addEventListener('click', () => {
+      telaAntesDeTrocar(() => {
+        telaCarregar({ id: null, nome: 'Novo fluxo', modelo: false, fluxo: tela.fluxos.novoVazio() });
+        telaRenderMontar();
+      });
+    });
+    v.querySelector('#rb-salvar').addEventListener('click', () => telaPedirNome(null));
+    v.querySelector('#rb-apagar').addEventListener('click', telaConfirmarApagar);
+    v.querySelector('#rb-pq').addEventListener('click', e => {
+      const b = e.target.closest('[data-pq]');
+      if (!b) return;
+      tela.fluxo.paraQuem = b.dataset.pq;
+      telaRenderMontar();
+    });
+    v.querySelector('#rb-paleta').addEventListener('click', e => {
+      const b = e.target.closest('[data-tipo]');
+      if (b) telaAdicionarPasso(b.dataset.tipo);
+    });
+    v.querySelector('#rb-passos').addEventListener('click', e => {
+      const card = e.target.closest('.rb-passo');
+      if (!card) return;
+      const i = Number(card.dataset.i);
+      const acao = e.target.closest('[data-acao]')?.dataset.acao;
+      if (acao === 'subir' || acao === 'descer') {
+        tela.fluxo.passos = moverPasso(tela.fluxo.passos, i, acao === 'subir' ? -1 : 1);
+        if (tela.aberto === i) tela.aberto = i + (acao === 'subir' ? -1 : 1);
+        else if (tela.aberto === i + (acao === 'subir' ? -1 : 1)) tela.aberto = i;
+      } else if (acao === 'remover') {
+        tela.fluxo.passos = removerPasso(tela.fluxo.passos, i);
+        if (tela.aberto === i) tela.aberto = null;
+        else if (tela.aberto !== null && tela.aberto > i) tela.aberto--;
+      } else if (e.target.closest('.rb-passo-topo')) {
+        tela.aberto = tela.aberto === i ? null : i; // só um cartão aberto por vez
+      } else {
+        return;
+      }
+      telaRenderMontar();
+    });
+    telaLigarCampos(v.querySelector('#rb-passos'));
+    telaLigarAjustes(v);
+    v.querySelector('#rb-iniciar').addEventListener('click', () => {
+      if (!podeIniciar(tela.fluxo)) {
+        // ordem inválida: o botão continua clicável para o modal explicar o motivo (§6)
+        const erro = erroDoModal((validarFluxo(tela.fluxo).erros || []));
+        if (erro && erro.indice) telaAbrirModal(erro);
+        return;
+      }
+      telaIniciar();
+    });
+    telaRenderMontar();
+  }
+
+  function telaPiscarParaQuem() {
+    const linha = document.getElementById('rb-pq');
+    linha.classList.remove('rb-pisca');
+    void linha.offsetWidth; // reinicia a animação
+    linha.classList.add('rb-pisca');
+    setTimeout(() => linha.classList.remove('rb-pisca'), 1300);
+  }
+
+  function telaAdicionarPasso(tipo) {
+    const f = tela.fluxo;
+    if (!f.paraQuem) { telaPiscarParaQuem(); return; }
+    if (f.passos.length >= FLUXO_MAX_PASSOS) return;
+    if (tipo === 'atender' && !disponibilidade(f.paraQuem).atender) return;
+    f.passos.push(novoPasso(tipo));
+    tela.aberto = f.passos.length - 1;
+    telaRenderMontar();
+    const doNovo = (validarFluxo(f).erros || []).filter(e => e.indice === f.passos.length);
+    if (doNovo.length) telaAbrirModal(erroDoModal(doNovo));
+  }
+
+  // ───────── Diálogos dos fluxos salvos (mesmo visual do modal de ordem; textos só por textContent)
+  function telaDialogo({ titulo, linha, detalhe, campo, botoes }) {
+    telaFecharModal();
+    const ancora = document.createElement('div');
+    ancora.className = 'rb-modal-ancora';
+    ancora.innerHTML = `
+      <div class="rb-modal-fundo">
+        <div class="rb-modal rb-modal-neutro" role="dialog" aria-modal="true" aria-labelledby="rb-modal-tit">
+          <h3 id="rb-modal-tit"></h3>
+          <p class="rb-modal-linha"></p>
+          <p class="rb-modal-detalhe"></p>
+          <input class="rb-in rb-modal-campo" hidden maxlength="40">
+          <p class="rb-modal-erro" role="alert"></p>
+          <div class="rb-modal-btns"></div>
+        </div>
+      </div>`;
+    ancora.querySelector('h3').textContent = titulo;
+    ancora.querySelector('.rb-modal-linha').textContent = linha || '';
+    ancora.querySelector('.rb-modal-detalhe').textContent = detalhe || '';
+    const input = ancora.querySelector('.rb-modal-campo');
+    const erro = ancora.querySelector('.rb-modal-erro');
+    if (campo) { input.hidden = false; input.placeholder = campo.placeholder || ''; input.value = campo.valor || ''; }
+    const btns = ancora.querySelector('.rb-modal-btns');
+    let primeiro = null;
+    for (const b of botoes) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.textContent = b.texto;
+      if (b.primario) el.className = 'rb-primario';
+      // a ação pode devolver um texto de erro: o diálogo continua aberto e mostra o erro
+      el.addEventListener('click', () => {
+        const msg = b.acao ? b.acao(input.value) : null;
+        if (typeof msg === 'string' && msg) { erro.textContent = msg; return; }
+        telaFecharModal();
+        if (b.depois) b.depois();
+      });
+      btns.appendChild(el);
+      if (!primeiro) primeiro = el;
+    }
+    win.insertBefore(ancora, win.firstChild);
+    ancora.querySelector('.rb-modal-fundo').style.height = win.clientHeight + 'px';
+    (campo ? input : primeiro).focus();
+    ancora.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { telaFecharModal(); telaRenderMontar(); }
+      if (e.key === 'Enter' && campo) { e.preventDefault(); btns.querySelector('.rb-primario')?.click(); }
+    });
+    return ancora;
+  }
+
+  // 💾: sempre cria um fluxo NOVO com nome. `depois` roda se salvar (usado na troca de fluxo).
+  function telaPedirNome(depois) {
+    telaDialogo({
+      titulo: '💾 Salvar como novo fluxo',
+      linha: 'Dê um nome ao fluxo.',
+      detalhe: 'Até 10 fluxos seus (os modelos ⭐ não contam). Modelos nunca são alterados.',
+      campo: { placeholder: 'Ex.: Mensagem de atualização', valor: '' },
+      botoes: [
+        { texto: 'Cancelar', acao: () => null, depois: () => telaRenderMontar() },
+        {
+          texto: 'Salvar', primario: true,
+          acao: nome => {
+            const r = tela.fluxos.salvar(nome, tela.fluxo);
+            if (!r.ok) return r.motivo;
+            const salvo = tela.fluxos.listar().find(x => x.id === r.id);
+            telaCarregar(salvo);
+            tela.fluxos.marcarAtual(r.id);
+            return null;
+          },
+          depois: () => { telaRenderMontar(); if (depois) depois(); },
+        },
+      ],
+    });
+  }
+
+  // Trocar de fluxo (ou criar um vazio) com alterações pendentes pergunta o que fazer (§9).
+  function telaAntesDeTrocar(seguir) {
+    if (!telaSujo()) { seguir(); return; }
+    telaDialogo({
+      titulo: 'Alterações não salvas',
+      linha: 'Você mexeu em "' + tela.item.nome + '".',
+      detalhe: 'Salvar como novo guarda uma cópia com as alterações. Descartar volta o fluxo ao que estava salvo.',
+      botoes: [
+        { texto: 'Voltar', acao: () => null, depois: () => telaRenderMontar() },
+        { texto: 'Descartar', acao: () => null, depois: seguir },
+        { texto: 'Salvar como novo', primario: true, acao: () => null, depois: () => telaPedirNome(seguir) },
+      ],
+    });
+  }
+
+  function telaConfirmarApagar() {
+    const id = tela.item.id;
+    if (!id || tela.item.modelo) return;
+    telaDialogo({
+      titulo: 'Apagar fluxo',
+      linha: 'Apagar "' + tela.item.nome + '"?',
+      detalhe: 'Isso não pode ser desfeito.',
+      botoes: [
+        { texto: 'Cancelar', acao: () => null },
+        {
+          texto: 'Apagar', primario: true,
+          acao: () => { const r = tela.fluxos.apagar(id); return r.ok ? null : r.motivo; },
+          depois: () => { const atual = tela.fluxos.listar()[0]; telaCarregar(atual); tela.fluxos.marcarAtual(atual.id); telaRenderMontar(); },
+        },
+      ],
+    });
+  }
+
+  // ───────── Modal de ordem inválida (layout-M)
+  function telaFecharModal() {
+    const m = win.querySelector('.rb-modal-ancora');
+    if (m) m.remove();
+  }
+
+  function telaAbrirModal(erro) {
+    telaFecharModal();
+    const t = textoModal(erro, tela.fluxo.passos);
+    const ancora = document.createElement('div');
+    ancora.className = 'rb-modal-ancora';
+    ancora.innerHTML = `
+      <div class="rb-modal-fundo">
+        <div class="rb-modal" role="dialog" aria-modal="true" aria-labelledby="rb-modal-tit">
+          <h3 id="rb-modal-tit"></h3>
+          <p class="rb-modal-linha"></p>
+          <p class="rb-modal-detalhe"></p>
+          <div class="rb-modal-btns"></div>
+        </div>
+      </div>`;
+    ancora.querySelector('h3').textContent = '⛔ ' + t.titulo;
+    ancora.querySelector('.rb-modal-linha').textContent = t.linha;
+    ancora.querySelector('.rb-modal-detalhe').textContent = t.detalhe;
+    const btns = ancora.querySelector('.rb-modal-btns');
+    const botao = (texto, classe, acao) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = texto;
+      if (classe) b.className = classe;
+      b.addEventListener('click', () => { telaFecharModal(); if (acao) acao(); });
+      btns.appendChild(b);
+      return b;
+    };
+    const entendi = botao('Entendi', '', null);
+    if (erro.sugestao) {
+      botao(erro.sugestao.texto, '', () => {
+        tela.fluxo.passos.splice(erro.sugestao.indice - 1, 0, novoPasso('espera'));
+        tela.fluxo.passos[erro.sugestao.indice - 1].modo = 'despausar';
+        tela.aberto = null;
+        telaRenderMontar();
+      });
+    }
+    if (erro.correcao && erro.correcao.acao === 'remover') {
+      botao(erro.correcao.texto, 'rb-primario', () => {
+        tela.fluxo.passos = removerPasso(tela.fluxo.passos, erro.correcao.indice - 1);
+        tela.aberto = null;
+        telaRenderMontar();
+      });
+    }
+    win.insertBefore(ancora, win.firstChild);
+    ancora.querySelector('.rb-modal-fundo').style.height = win.clientHeight + 'px';
+    entendi.focus();
+    ancora.addEventListener('keydown', e => { if (e.key === 'Escape') telaFecharModal(); });
+  }
+
+  function telaRenderMontar() {
+    const v = rbVistas.montar;
+    const f = tela.fluxo;
+    // seletor de fluxos
+    const sel = v.querySelector('#rb-fluxo-sel');
+    sel.innerHTML = '';
+    const itens = tela.fluxos.listar();
+    if (!tela.item.id) itens.unshift({ id: '', nome: tela.item.nome });
+    for (const it of itens) {
+      const o = document.createElement('option');
+      o.value = it.id || '';
+      o.textContent = it.nome;
+      sel.appendChild(o);
+    }
+    sel.value = tela.item.id || '';
+    v.querySelector('#rb-apagar').hidden = !tela.item.id || !!tela.item.modelo;
+    telaAtualizarAlterado();
+    // Para quem?
+    v.querySelectorAll('.rb-pq').forEach(b => b.classList.toggle('on', b.dataset.pq === f.paraQuem));
+    // paleta
+    const pal = v.querySelector('#rb-paleta');
+    const disp = disponibilidade(f.paraQuem);
+    const cheio = f.passos.length >= FLUXO_MAX_PASSOS;
+    pal.querySelector('[data-tipo="atender"]').hidden = !!f.paraQuem && !disp.atender;
+    pal.classList.toggle('rb-off', !f.paraQuem || cheio);
+    pal.classList.toggle('rb-destaque', !!f.paraQuem && f.passos.length === 0);
+    v.querySelector('#rb-pal-dica').textContent = !f.paraQuem ? 'Escolha para quem primeiro'
+      : cheio ? 'Máximo ' + FLUXO_MAX_PASSOS + ' passos'
+        : f.passos.length === 0 ? 'Toque num ícone para adicionar um passo' : '';
+    // passos (estrutura); o que muda ao digitar é atualizado por telaAtualizarMontar, sem perder o foco
+    const lista = v.querySelector('#rb-passos');
+    lista.innerHTML = '';
+    f.passos.forEach((passo, i) => {
+      const card = document.createElement('div');
+      card.className = 'rb-passo' + (tela.aberto === i ? ' aberto' : '');
+      card.dataset.i = String(i);
+      card.innerHTML = `
+        <div class="rb-passo-topo">
+          <span class="rb-num"></span>
+          <div class="rb-passo-txt"><div class="rb-passo-tit"><span class="rb-tit-txt"></span> <span class="rb-selo"></span></div>
+            <div class="rb-passo-res"></div><div class="rb-passo-erro"></div></div>
+          <div class="rb-ctl">
+            <button type="button" data-acao="subir" title="Subir">▲</button>
+            <button type="button" data-acao="descer" title="Descer">▼</button>
+            <button type="button" data-acao="remover" title="Remover">✕</button>
+          </div>
+        </div>
+        <div class="rb-campos"></div>`;
+      card.querySelector('.rb-num').textContent = String(i + 1);
+      card.querySelector('[data-acao="subir"]').disabled = i === 0;
+      card.querySelector('[data-acao="descer"]').disabled = i === f.passos.length - 1;
+      telaMontarCampos(card.querySelector('.rb-campos'), passo, f);
+      lista.appendChild(card);
+    });
+    telaAtualizarMontar();
+    telaAtualizarAjustes();
+    if (!tela.exec) telaRenderAcompanhar();
+  }
+
+  // ───────── ⚙️ Ajustes (velocidade, loop, pausa entre ciclos, puxar a fila)
+  function telaTextoSegundos(n) {
+    return String(n).replace('.', ',');
+  }
+
+  function telaAtualizarAlterado() {
+    rbVistas.montar.querySelector('#rb-alterado').hidden = !telaSujo();
+  }
+
+  function telaAtualizarAjustes() {
+    telaAtualizarAlterado();
+    const v = rbVistas.montar;
+    const f = tela.fluxo;
+    const porChat = f.paraQuem === 'caindo' || f.paraQuem === 'ambos';
+    const loop = loopEfetivo(f);
+    const partes = ['Velocidade ' + Number(f.velocidade).toFixed(1)];
+    if (porChat) partes.push(f.puxarFila ? 'Puxa a fila' : 'Sem puxar a fila');
+    else if (loop.efetivo) partes.push('🔁 Loop ligado', telaTextoSegundos(f.pausaCiclos) + ' s entre ciclos');
+    else partes.push('🔁 Loop desligado');
+    v.querySelector('#rb-ajustes-res').textContent = partes.join(' · ');
+    v.querySelector('#rb-loop-bloco').hidden = porChat;
+    v.querySelector('#rb-ciclo-bloco').hidden = porChat;
+    v.querySelector('#rb-puxar-bloco').hidden = !porChat;
+    const campo = (id, valor) => { const el = v.querySelector(id); if (document.activeElement !== el) el.value = valor; };
+    campo('#rb-vel', Number(f.velocidade).toFixed(1));
+    campo('#rb-ciclo', String(f.pausaCiclos));
+    const caixaLoop = v.querySelector('#rb-loop');
+    caixaLoop.checked = !!f.loopEscolha; // a escolha do usuário nunca se perde (§7)
+    caixaLoop.disabled = !loop.habilitado;
+    v.querySelector('#rb-loop-motivo').textContent = loop.habilitado ? '' : (loop.motivo || '');
+    v.querySelector('#rb-puxar').checked = !!f.puxarFila;
+  }
+
+  function telaLigarAjustes(v) {
+    const topo = v.querySelector('#rb-ajustes-topo');
+    const corpo = v.querySelector('#rb-ajustes-corpo');
+    topo.addEventListener('click', () => {
+      corpo.hidden = !corpo.hidden;
+      topo.setAttribute('aria-expanded', String(!corpo.hidden));
+      v.querySelector('.rb-seta').textContent = corpo.hidden ? '▾' : '▴';
+    });
+    v.querySelector('#rb-vel').addEventListener('change', e => {
+      const n = normalizarVelocidade(e.target.value);
+      tela.fluxo.velocidade = n.valor;
+      e.target.value = n.valor.toFixed(1);
+      v.querySelector('#rb-vel-aviso').textContent = n.aviso || '';
+      telaAtualizarAjustes();
+    });
+    v.querySelector('#rb-ciclo').addEventListener('change', e => {
+      const n = normalizarPausaCiclos(e.target.value);
+      tela.fluxo.pausaCiclos = n.valor;
+      e.target.value = String(n.valor);
+      v.querySelector('#rb-ciclo-aviso').textContent = n.aviso || '';
+      telaAtualizarAjustes();
+    });
+    v.querySelector('#rb-loop').addEventListener('change', e => {
+      tela.fluxo.loopEscolha = e.target.checked;
+      telaAtualizarAjustes();
+    });
+    v.querySelector('#rb-puxar').addEventListener('change', e => {
+      tela.fluxo.puxarFila = e.target.checked;
+      telaAtualizarAjustes();
+    });
+  }
+
+  function telaSeg(campo, opcoes, atual) {
+    return `<div class="rb-seg" data-campo="${campo}">${opcoes.map(([v, rot, oculto]) =>
+      `<button type="button" data-v="${v}" class="${v === atual ? 'on' : ''}"${oculto ? ' hidden' : ''}>${rot}</button>`).join('')}</div>`;
+  }
+
+  function telaChipsPastas() {
+    const lista = [];
+    for (const nome of [...DEFAULT_FOLDERS, ...getRecentFolders()]) {
+      if (!lista.some(x => x.toLowerCase() === nome.toLowerCase())) lista.push(nome);
+    }
+    return lista.slice(0, 6);
+  }
+
+  // Campos de cada bloco (§4). Textos do usuário entram por .value / textContent, nunca por HTML.
+  function telaMontarCampos(caixa, passo, f) {
+    let html = '';
+    if (passo.tipo === 'enviar') {
+      html += telaSeg('modo', [['so', '🛡️ Só enviar'], ['finalizar', '⚡ Enviar + Finalizar']], passo.modo);
+      html += '<textarea class="rb-in" data-campo="mensagem" rows="3" placeholder="Mensagem para o cliente"></textarea>';
+      html += '<div class="rb-linha"><button type="button" class="rb-chip" data-acao-campo="padrao">📋 Usar padrão</button></div>';
+      if (passo.modo === 'finalizar') html += '<input class="rb-in" data-campo="tag" placeholder="Tag (ex.: Resolvido)">';
+    } else if (passo.tipo === 'espera') {
+      const semDespausar = !disponibilidade(f.paraQuem).despausar && passo.modo !== 'despausar';
+      html += telaSeg('modo', [['pausar', '⏸️ Pausar'], ['despausar', '▶️ Despausar', semDespausar]], passo.modo);
+    } else if (passo.tipo === 'mover') {
+      html += '<input class="rb-in" data-campo="pasta" placeholder="Nome da pasta">';
+      html += `<div class="rb-chips">${telaChipsPastas().map(() => '<button type="button" class="rb-chip" data-pasta=""></button>').join('')}</div>`;
+    } else if (passo.tipo === 'transferir') {
+      const para = passo.para === 'fila' ? 'fila' : 'atendente';
+      html += telaSeg('para', [['atendente', '👤 Atendente'], ['fila', '👥 Fila']], para);
+      html += para === 'fila'
+        ? '<input class="rb-in" data-campo="fila" placeholder="Nome da fila (exato, como no Blip)">'
+        : '<input class="rb-in" data-campo="atendente" placeholder="Nome do atendente (exato, como no Blip)">';
+    }
+    html += `<div class="rb-linha rb-vel"><span class="rb-sub">Velocidade deste passo</span><span class="rb-sp"></span>
+      <input class="rb-in rb-in-vel" data-campo="velocidade" placeholder="do fluxo" inputmode="decimal"><span class="rb-aviso"></span></div>`;
+    caixa.innerHTML = html;
+    for (const el of caixa.querySelectorAll('[data-campo="mensagem"], [data-campo="tag"], [data-campo="pasta"], [data-campo="atendente"], [data-campo="fila"]')) {
+      el.value = passo[el.dataset.campo] || '';
+    }
+    if (passo.tipo === 'mover') {
+      const chips = caixa.querySelectorAll('[data-pasta]');
+      telaChipsPastas().forEach((nome, k) => { chips[k].dataset.pasta = nome; chips[k].textContent = nome; });
+    }
+    const vel = caixa.querySelector('[data-campo="velocidade"]');
+    vel.value = passo.velocidade === null || passo.velocidade === undefined ? '' : Number(passo.velocidade).toFixed(1);
+  }
+
+  // Atualiza o que depende dos valores (títulos, selo, resumos, erros, campos vazios, Iniciar) sem recriar os campos.
+  function telaAtualizarMontar() {
+    telaAtualizarAlterado();
+    const v = rbVistas.montar;
+    const f = tela.fluxo;
+    const validacao = validarFluxo(f);
+    v.querySelectorAll('#rb-passos .rb-passo').forEach(card => {
+      const i = Number(card.dataset.i);
+      const passo = f.passos[i];
+      const errosDoPasso = (validacao.erros || []).filter(e => e.indice === i + 1);
+      const principal = errosDoPasso.length ? erroDoModal(errosDoPasso) : null;
+      card.classList.toggle('erro', !!principal);
+      card.querySelector('.rb-tit-txt').textContent = tituloPasso(passo);
+      card.querySelector('.rb-selo').textContent = seloVelocidade(passo) || '';
+      card.querySelector('.rb-passo-res').textContent = resumoPasso(passo);
+      card.querySelector('.rb-passo-erro').textContent = principal
+        ? (principal.dica ? principal.mensagem + ' · ' + principal.dica : principal.mensagem) : '';
+      const faltando = validarCampos(passo).map(x => x.campo);
+      card.querySelectorAll('[data-campo]').forEach(el => el.classList.toggle('rb-vazio', faltando.includes(el.dataset.campo)));
+    });
+    const pode = podeIniciar(f) && !rodando;
+    const btnIniciar = v.querySelector('#rb-iniciar');
+    btnIniciar.textContent = rodando ? '⏳ Fluxo rodando…' : '⚡ Iniciar fluxo';
+    const temErroDePasso = (validacao.erros || []).some(e => e.indice);
+    // bloqueado em qualquer caso; só fica "clicável" (aria-disabled) quando há erro de ordem, para abrir o modal
+    btnIniciar.disabled = !pode && !temErroDePasso;
+    btnIniciar.classList.toggle('rb-bloqueado', !pode);
+    if (pode) btnIniciar.removeAttribute('aria-disabled');
+    else btnIniciar.setAttribute('aria-disabled', 'true');
+    const primeiro = erroDoModal(validacao.erros || []);
+    const vazio = f.passos.findIndex(p => validarCampos(p).length);
+    v.querySelector('#rb-iniciar-dica').textContent = pode ? ''
+      : rodando ? 'Só um fluxo por vez: acompanhe ou pare em Acompanhar'
+      : !f.paraQuem ? 'Escolha para quem primeiro'
+        : !f.passos.length ? 'Toque num ícone da paleta para começar'
+          : primeiro && primeiro.indice ? 'Corrija o passo ' + primeiro.indice
+            : primeiro ? primeiro.mensagem
+              : vazio >= 0 ? 'Preencha o passo ' + (vazio + 1) : '';
+  }
+
+  function telaLigarCampos(lista) {
+    const passoDe = el => tela.fluxo.passos[Number(el.closest('.rb-passo').dataset.i)];
+    lista.addEventListener('input', e => {
+      const campo = e.target.dataset && e.target.dataset.campo;
+      if (!campo || campo === 'velocidade') return;
+      passoDe(e.target)[campo] = e.target.value;
+      telaAtualizarMontar();
+    });
+    lista.addEventListener('change', e => {
+      if (!e.target.dataset || e.target.dataset.campo !== 'velocidade') return;
+      const passo = passoDe(e.target);
+      const aviso = e.target.parentElement.querySelector('.rb-aviso');
+      if (!e.target.value.trim()) {
+        passo.velocidade = null;
+        aviso.textContent = '';
+      } else {
+        const n = normalizarVelocidade(e.target.value);
+        passo.velocidade = n.valor;
+        e.target.value = n.valor.toFixed(1);
+        aviso.textContent = n.aviso || '';
+      }
+      telaAtualizarMontar();
+    });
+    lista.addEventListener('click', e => {
+      const seg = e.target.closest('.rb-seg [data-v]');
+      const chip = e.target.closest('[data-pasta]');
+      const padrao = e.target.closest('[data-acao-campo="padrao"]');
+      if (!seg && !chip && !padrao) return;
+      const passo = passoDe(e.target);
+      if (seg) passo[seg.parentElement.dataset.campo] = seg.dataset.v;
+      if (chip) passo.pasta = chip.dataset.pasta;
+      if (padrao) passo.mensagem = MENSAGEM_PADRAO; // só quando o usuário toca (§9)
+      telaRenderMontar();
+    });
+  }
+
+  telaMontarCasca();
 
   function fecharPainel() {
     painelFechado = true;
@@ -4124,14 +4856,27 @@
     window.removeEventListener('rf-bm-theme-change', onSyncTheme);
     p.remove();
     styleEl.remove();
+    if (window.__rodBot) delete window.__rodBot;
     if (window.__rodBotCleanup === fecharPainel) {
       delete window.__rodBotCleanup;
     }
   }
+  btnBaixarLog.onclick = () => {
+    logSalvarAgora();
+    const linhas = logLerSalvo();
+    if (!linhas.length) { log('ℹ️ Ainda não há log salvo.'); return; }
+    baixarArquivo(`rodbot-log_${carimboArquivo()}.txt`, linhas.join('\r\n') + '\r\n', 'text/plain;charset=utf-8');
+  };
+  btnBaixarRelatorio.onclick = () => {
+    let dados = null;
+    try { dados = JSON.parse(localStorage.getItem(LOTE_RELATORIO_CHAVE) || 'null'); } catch {}
+    const regs = (dados && Array.isArray(dados.registros)) ? dados.registros : loteRegistros;
+    if (!regs.length) { log('ℹ️ Nenhuma execução registrada ainda.'); return; }
+    baixarArquivo(`rodbot-relatorio_${carimboArquivo()}.csv`, loteCsv(regs), 'text/csv;charset=utf-8');
+    log(`📄 Relatório baixado (execução de ${(dados && dados.inicio) || 'agora'}: ${loteResumo(regs).texto}).`);
+  };
   btnClose.onclick = fecharPainel;
   window.__rodBotCleanup = fecharPainel;
-  btnPauseAll.onclick = () => { if (!autoBloqueiaOutras()) executarModoEsperaTodos('pausar'); };
-  btnUnpauseAll.onclick = () => { if (!autoBloqueiaOutras()) executarModoEsperaTodos('despausar'); };
-  log(`🤖 rod bot ${LOTE_VERSAO} pronto! Escolha uma aba acima.`);
+  log(`🤖 rod bot ${LOTE_VERSAO} pronto! Monte o fluxo e toque em Iniciar.`);
   if (logLerSalvo().length > 1) log(`💾 Há log salvo de antes (${logLerSalvo().length} linhas): clique em "💾 Log" para baixar.`);
 })();;void 0;

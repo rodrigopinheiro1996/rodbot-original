@@ -8,6 +8,6 @@ module.exports = function carregarPuro() {
   const ctx = {};
   vm.createContext(ctx);
   vm.runInContext(codigo + '\n;this.__x = { loteEscolherProximo, loteMemoriaLimpar, loteJaRecebeu, loteEscolherTag,' +
-    ' loteBotaoConfirmaFinalizar, loteSalto, loteDuracao, loteResumo, loteCsv, loteLimitarLinhas, LOTE_VERSAO };', ctx);
+    ' loteBotaoConfirmaFinalizar, loteSalto, loteDuracao, loteResumo, loteCsv, loteLimitarLinhas, loteChaveEnvio, LOTE_VERSAO };', ctx);
   return ctx.__x;
 };

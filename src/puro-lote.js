@@ -1,5 +1,5 @@
-/* Funções puras do lote "Enviar + Finalizar" (v10.1). Nada aqui toca o DOM: são testadas no Node
- * (tests/puro-lote.test.js) e o build cola este arquivo dentro do bookmarklet no marcador PURO-LOTE.
+/* Funções puras das melhorias da v10.1 (memória de envio, relatório, tag, modal, relógio). Nada aqui toca o DOM:
+ * são testadas no Node (tests/puro-lote.test.js) e o build cola este arquivo dentro do bookmarklet no marcador PURO-LOTE.
  */
 
 const LOTE_VERSAO = 'v10.1';
@@ -10,13 +10,15 @@ const LOTE_MEMORIA_TTL = 24 * 60 * 60 * 1000;
 const LOTE_MEMORIA_MAX = 3000;
 const LOTE_LOG_MAX_SALVO = 4000; // linhas guardadas no navegador
 const LOTE_LOG_MAX_TELA = 1500; // linhas mostradas no painel (mais que isso deixa a página lenta)
-const LOTE_FALHAS_SEGUIDAS = 8; // tantas falhas seguidas = problema geral: o lote pausa e espera você
-const LOTE_ROLAGENS_FIM = 6; // quantas vezes rola a lista procurando mais clientes antes de terminar
+const LOTE_FALHAS_SEGUIDAS = 8; // tantas falhas seguidas = problema geral: o fluxo pausa e espera você
+const LOTE_ROLAGENS_FIM = 3; // quantas vezes seguidas rola a lista sem achar cliente novo antes de encerrar o passo
 const LOTE_SALTO_MS = 30000; // relógio pulou mais que isso = o navegador ficou parado (tela bloqueada/suspensão)
 
 // Estados gravados na memória do lote. Qualquer estado diferente de 'nao_enviado' bloqueia novo envio.
 const LOTE_ESTADOS_TEXTO = {
   finalizado: 'enviado e finalizado',
+  enviado: 'enviado',
+  feito: 'feito',
   parcial: 'enviado, NÃO finalizado',
   incerto: 'envio incerto (confira)',
   enviando: 'envio interrompido (confira)',
@@ -24,6 +26,14 @@ const LOTE_ESTADOS_TEXTO = {
   falha: 'falha (nada enviado)',
   simulado: 'simulado (nada enviado)',
 };
+
+// Chave da memória de envio: o mesmo ticket pode receber outra mensagem, mas nunca a MESMA duas vezes em 24 h.
+function loteChaveEnvio(id, mensagem) {
+  const t = String(mensagem || '').replace(/\s+/g, ' ').trim();
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+  return String(id) + '|' + h.toString(36);
+}
 
 // Próximo ticket da lista que ainda não foi tentado nesta execução. null = acabou o que está na tela.
 function loteEscolherProximo(ids, tentados) {
@@ -85,33 +95,32 @@ function loteDuracao(ms) {
   return Math.floor(m / 60) + ' h ' + (m % 60) + ' min';
 }
 
-// Resumo do lote a partir dos registros [{ id, resultado, motivo, hora }].
+// Resumo a partir dos registros [{ id, passo, resultado, motivo, hora }].
+const LOTE_RESUMO_ORDEM = [
+  ['simulado', 'simulados'], ['finalizado', 'enviados e finalizados'], ['enviado', 'enviados'], ['feito', 'feitos'],
+  ['parcial', 'enviados SEM finalizar'], ['incerto', 'com envio incerto'], ['pulado', 'pulados'], ['falha', 'falhas'],
+];
 function loteResumo(registros) {
-  const c = { finalizado: 0, parcial: 0, incerto: 0, pulado: 0, falha: 0, simulado: 0 };
+  const c = {};
+  for (const [k] of LOTE_RESUMO_ORDEM) c[k] = 0;
   for (const r of registros || []) {
     if (c[r.resultado] !== undefined) c[r.resultado]++;
   }
-  const partes = [];
-  if (c.simulado) partes.push(c.simulado + ' simulados');
-  partes.push(c.finalizado + ' enviados e finalizados');
-  if (c.parcial) partes.push(c.parcial + ' enviados SEM finalizar');
-  if (c.incerto) partes.push(c.incerto + ' com envio incerto');
-  partes.push(c.pulado + ' pulados');
-  partes.push(c.falha + ' falhas');
+  const partes = LOTE_RESUMO_ORDEM.filter(([k]) => c[k] || k === 'pulado' || k === 'falha').map(([k, rot]) => c[k] + ' ' + rot);
   return { contagem: c, texto: partes.join(' · ') };
 }
 
-// Relatório CSV (separador ; para abrir direto no Excel). Só id do ticket, nada da conversa.
+// Relatório CSV (separador ; para abrir direto no Excel). Só número do ticket, nada da conversa.
 function loteCsv(registros) {
   const esc = (v) => {
     const s = String(v === undefined || v === null ? '' : v);
     return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
-  const linhas = ['Ticket;Resultado;Motivo;Hora'];
+  const linhas = ['Ticket;Passo;Resultado;Motivo;Hora'];
   for (const r of registros || []) {
-    linhas.push([r.id, LOTE_ESTADOS_TEXTO[r.resultado] || r.resultado, r.motivo, r.hora].map(esc).join(';'));
+    linhas.push([r.id, r.passo, LOTE_ESTADOS_TEXTO[r.resultado] || r.resultado, r.motivo, r.hora].map(esc).join(';'));
   }
-  return '﻿' + linhas.join('\r\n') + '\r\n';
+  return '\uFEFF' + linhas.join('\r\n') + '\r\n';
 }
 
 // Mantém só as últimas `max` linhas.
