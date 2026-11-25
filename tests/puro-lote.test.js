@@ -50,19 +50,27 @@ test('detecta quando o navegador ficou parado (tela bloqueada)', () => {
   assert.strictEqual(P.loteDuracao(3720000), '1 h 2 min');
 });
 
-test('resumo e CSV do lote', () => {
+test('resumo e CSV do relatório', () => {
   const regs = [
-    { id: '10', resultado: 'finalizado', motivo: '', hora: '10:00:00' },
-    { id: '11', resultado: 'parcial', motivo: 'tag "x" não encontrada', hora: '10:00:10' },
-    { id: '12', resultado: 'pulado', motivo: 'campo; indisponível', hora: '10:00:20' },
+    { id: '10', passo: '1 · Enviar + Finalizar', resultado: 'finalizado', motivo: '', hora: '10:00:00' },
+    { id: '11', passo: '1 · Enviar + Finalizar', resultado: 'parcial', motivo: 'tag "x" não encontrada', hora: '10:00:10' },
+    { id: '12', passo: '1 · Enviar + Finalizar', resultado: 'pulado', motivo: 'campo; indisponível', hora: '10:00:20' },
   ];
   const r = P.loteResumo(regs);
   assert.strictEqual(r.contagem.finalizado, 1);
   assert.strictEqual(r.texto, '1 enviados e finalizados · 1 enviados SEM finalizar · 1 pulados · 0 falhas');
   const csv = P.loteCsv(regs);
-  assert.ok(csv.startsWith('﻿Ticket;Resultado;Motivo;Hora\r\n'));
-  assert.ok(csv.includes('11;enviado, NÃO finalizado;"tag ""x"" não encontrada";10:00:10'));
-  assert.ok(csv.includes('12;pulado;"campo; indisponível";10:00:20'));
+  assert.ok(csv.startsWith('\uFEFFTicket;Passo;Resultado;Motivo;Hora\r\n'));
+  assert.ok(csv.includes('11;1 · Enviar + Finalizar;enviado, NÃO finalizado;"tag ""x"" não encontrada";10:00:10'));
+  assert.ok(csv.includes('12;1 · Enviar + Finalizar;pulado;"campo; indisponível";10:00:20'));
+});
+
+test('memória de envio: mesma mensagem = mesma chave; outra mensagem = outra chave', () => {
+  const a = P.loteChaveEnvio('10', 'Olá,  tudo bem?');
+  assert.strictEqual(a, P.loteChaveEnvio('10', 'Olá, tudo bem? '));
+  assert.notStrictEqual(a, P.loteChaveEnvio('10', 'Outra mensagem'));
+  assert.notStrictEqual(a, P.loteChaveEnvio('11', 'Olá, tudo bem?'));
+  assert.ok(a.startsWith('10|'));
 });
 
 test('limita linhas do log', () => {
