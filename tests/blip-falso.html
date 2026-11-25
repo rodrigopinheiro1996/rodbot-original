@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Blip falso (teste)</title>
+<!--
+  Página FALSA do Blip Desk para os testes do lote Enviar + Finalizar. Só dados fictícios.
+  Confirmado no Blip real (CLAUDE.md, 25/11/2026): article da lista, #ticket-sequential-id, #text-input fora de sombra,
+  #close-ticket-button. DEDUZIDO (não confirmado): a lista carrega mais cards ao rolar; o card some ao finalizar;
+  o modal de finalizar tem "Finalizar ticket" e "Cancelar"; a caixa de tags é um bds-select-chips com sombra.
+-->
+<style>
+  body { font-family: sans-serif; margin: 0; display: flex; }
+  #sidenav-div { width: 260px; }
+  .infinite-scroll { height: 240px; overflow-y: auto; border: 1px solid #ccc; }
+  article.chat-list-item { height: 40px; border-bottom: 1px solid #eee; padding: 4px; cursor: pointer; }
+  #pane-chat-div { flex: 1; padding: 8px; }
+  bds-modal { display: none; position: fixed; inset: 30% 30%; background: #fff; border: 2px solid #000; padding: 10px; }
+  bds-modal[open="true"] { display: block; }
+</style>
+</head>
+<body>
+<div id="sidenav-div">
+  <div class="infinite-scroll" id="lista"></div>
+</div>
+<div id="pane-chat-div">
+  <div id="cabecalho"></div>
+  <div id="mensagens"></div>
+  <textarea id="text-input" rows="3"></textarea>
+  <div class="tags-container"><div class="pointer"><bds-typo>Adicionar tags</bds-typo></div></div>
+  <div id="caixa-tags"></div>
+  <bds-button-icon id="close-ticket-button-icon"></bds-button-icon>
+</div>
+<bds-modal id="modal-finalizar" open="false">
+  <p>Deseja finalizar o atendimento?</p>
+  <bds-button id="btn-cancelar" variant="secondary">Cancelar</bds-button>
+  <bds-button id="btn-confirmar" variant="primary">Finalizar ticket</bds-button>
+</bds-modal>
+<script>
+  // Cenário (fictício): 12 tickets; a lista mostra 5 e carrega mais 5 a cada rolagem até o fim.
+  const CEN = window.__cenario || {};
+  const TOTAL = CEN.total || 12;
+  const EM_ESPERA = new Set(CEN.emEspera || ['1003']);       // campo desabilitado
+  const RASCUNHO = CEN.rascunho || { '1005': 'texto que o atendente digitou' };
+  const SEM_TAG = new Set(CEN.semTag || ['1008']);            // a tag pedida não aparece para este ticket
+  const TAGS = ['Cobrança', 'Revisão app'];
+
+  const estado = { carregados: 0, aberto: null, rascunhos: { ...RASCUNHO }, envios: [], finalizados: [], tags: {} };
+  window.__blip = estado;
+
+  customElements.define('bds-typo', class extends HTMLElement {});
+  customElements.define('bds-button', class extends HTMLElement {});
+  customElements.define('bds-modal', class extends HTMLElement {});
+  customElements.define('bds-select-option', class extends HTMLElement {});
+  customElements.define('bds-button-icon', class extends HTMLElement {
+    constructor() {
+      super();
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = '<button>Finalizar</button>';
+      r.querySelector('button').addEventListener('click', () => {
+        if (estado.aberto) document.getElementById('modal-finalizar').setAttribute('open', 'true');
+      });
+    }
+  });
+  customElements.define('bds-select-chips', class extends HTMLElement {
+    constructor() {
+      super();
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = '<input><div class="select__options--open"></div>';
+      const input = r.querySelector('input');
+      const box = r.querySelector('div');
+      input.addEventListener('input', () => {
+        box.innerHTML = '';
+        const termo = input.value.toLowerCase();
+        for (const t of TAGS) {
+          if (SEM_TAG.has(estado.aberto) && t.toLowerCase().startsWith('revi')) continue;
+          if (!t.toLowerCase().includes(termo.slice(0, 3))) continue;
+          const op = document.createElement('bds-select-option');
+          op.textContent = t;
+          op.addEventListener('click', () => {
+            (estado.tags[estado.aberto] = estado.tags[estado.aberto] || []).push(t);
+            this.remove();
+          });
+          box.appendChild(op);
+        }
+      });
+    }
+  });
+
+  const lista = document.getElementById('lista');
+  const cab = document.getElementById('cabecalho');
+  const msgs = document.getElementById('mensagens');
+  const campo = document.getElementById('text-input');
+
+  function carregarMais() {
+    const ate = Math.min(TOTAL, estado.carregados + 5);
+    for (let i = estado.carregados; i < ate; i++) {
+      const id = String(1001 + i);
+      const a = document.createElement('article');
+      a.className = 'chat-list-item';
+      a.setAttribute('aria-label', 'Ticket ' + id + ' - Cliente Teste ' + (i + 1));
+      a.innerHTML = '<span>Cliente Teste ' + (i + 1) + '</span>' +
+        '<div class="ticket-menu"><button class="ticket-info-options" id="menu-' + id + '">⋮</button></div>';
+      a.addEventListener('click', () => abrir(id));
+      lista.appendChild(a);
+    }
+    estado.carregados = ate;
+  }
+  lista.addEventListener('scroll', () => {
+    if (lista.scrollTop + lista.clientHeight >= lista.scrollHeight - 10 && estado.carregados < TOTAL) carregarMais();
+  });
+
+  function abrir(id) {
+    if (estado.aberto) estado.rascunhos[estado.aberto] = campo.value;
+    estado.aberto = id;
+    cab.innerHTML = '<span id="ticket-sequential-id">Ticket: #' + id + '</span>';
+    msgs.innerHTML = '';
+    for (const e of estado.envios.filter(x => x.id === id)) {
+      const d = document.createElement('div');
+      d.textContent = e.texto;
+      msgs.appendChild(d);
+    }
+    campo.value = estado.rascunhos[id] || '';
+    campo.disabled = EM_ESPERA.has(id);
+  }
+
+  campo.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !estado.aberto || !campo.value.trim()) return;
+    estado.envios.push({ id: estado.aberto, texto: campo.value });
+    const d = document.createElement('div');
+    d.textContent = campo.value;
+    msgs.appendChild(d);
+    campo.value = '';
+    estado.rascunhos[estado.aberto] = '';
+  });
+
+  document.querySelector('.tags-container .pointer').addEventListener('click', () => {
+    if (!document.querySelector('bds-select-chips')) {
+      document.getElementById('caixa-tags').appendChild(document.createElement('bds-select-chips'));
+    }
+  });
+
+  // Deduzido: Esc fecha a caixa de tags.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.querySelector('bds-select-chips')?.remove();
+  });
+
+  document.getElementById('btn-cancelar').addEventListener('click', () => {
+    document.getElementById('modal-finalizar').setAttribute('open', 'false');
+  });
+  document.getElementById('btn-confirmar').addEventListener('click', () => {
+    const id = estado.aberto;
+    document.getElementById('modal-finalizar').setAttribute('open', 'false');
+    if (!id) return;
+    estado.finalizados.push(id);
+    document.getElementById('menu-' + id)?.closest('article')?.remove();
+    estado.aberto = null;
+    cab.innerHTML = '';
+    msgs.innerHTML = '';
+    campo.value = '';
+    if (lista.scrollHeight <= lista.clientHeight + 5 && estado.carregados < TOTAL) carregarMais();
+  });
+
+  carregarMais();
+</script>
+</body>
+</html>

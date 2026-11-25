@@ -1,0 +1,9 @@
+{
+  "name": "rodbot-original",
+  "private": true,
+  "description": "rod bot (bookmarklet do Blip Desk) — versão revisada",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node --test tests/*.test.js"
+  }
+}
